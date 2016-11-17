@@ -6,8 +6,6 @@ The library is still very much a work in progress.
 
 ## Installation
 
-If [available in Hex](https://hex.pm/docs/publish), the package can be installed as:
-
   1. Add `surge` to your list of dependencies in `mix.exs`:
 
     ```elixir
