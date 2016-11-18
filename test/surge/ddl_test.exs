@@ -6,7 +6,7 @@ defmodule Surge.DDLTest do
   test "HashModel" do
     defmodule HashModel do
       use Surge.Model
-      hash id: :string
+      hash id: {:string, ""}
     end
 
     create_table  HashModel
@@ -23,8 +23,8 @@ defmodule Surge.DDLTest do
   test "HashRangeModel" do
     defmodule HashRangeModel do
       use Surge.Model
-      hash id: :string
-      range time: :number
+      hash id: {:string, ""}
+      range time: {:number, nil}
       throughput read: 10, write: 3
     end
 
@@ -42,7 +42,7 @@ defmodule Surge.DDLTest do
   test "No Table" do
     defmodule NoTableModel do
       use Surge.Model
-      hash id: :string
+      hash id: {:string, ""}
     end
 
     assert_raise Surge.Exceptions.ResourceNotFoundException, "Cannot do operations on a non-existent table", fn -> describe_table NoTableModel end
