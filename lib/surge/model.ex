@@ -12,7 +12,7 @@ defmodule Surge.Model do
       Module.put_attribute(__MODULE__, :table_name, table_name)
       Module.put_attribute(__MODULE__, :throughput, [3,1])
       Module.register_attribute(__MODULE__, :attributes, accumulate: true)
-      Module.put_attribute(__MODULE__, :keys, [hash: {:id, :number}])
+      Module.put_attribute(__MODULE__, :keys, [hash: {:id, {:number, nil}}])
 
       import Surge.Model
       @before_compile unquote(__MODULE__)
@@ -26,8 +26,20 @@ defmodule Surge.Model do
     table_name = Module.get_attribute(target, :table_name)
     Module.put_attribute(target, :canonical_table_name, "#{namespace}.#{table_name}")
     Module.eval_quoted __CALLER__, [
+      Surge.Model.__def_struct__(target),
       Surge.Model.__def_helper_funcs__(target)
     ]
+  end
+
+  def __def_struct__(mod) do
+    attribs              = Module.get_attribute(mod, :attributes)
+    fields               = attribs |> Enum.map(fn {name, {_type, default}} -> {name, default} end)
+
+    quote bind_quoted: [fields: fields] do
+      quote do
+        defstruct unquote(fields)
+      end
+    end
   end
 
   def __def_helper_funcs__(mod) do
@@ -56,24 +68,40 @@ defmodule Surge.Model do
     Module.put_attribute(mod, :keys, updated_keys)
   end
 
+  defmacro attributes(decl) do
+    {list_of_attrs, _} = Code.eval_quoted(decl)
+    for attr <- list_of_attrs do
+      quote do: attribute([unquote(attr)])
+    end
+  end
+
+  defmacro attribute(decl) do
+    quote bind_quoted: [decl: decl] do
+      {name, type, default} = case decl do
+                       [{name, {type, default}}] -> {name, type, default}
+                     end
+      Surge.Model.__attribute__(__MODULE__, name, type, default)
+    end
+  end
+
   defmacro hash(pk) do
     quote bind_quoted: [pk: pk] do
-      {name, type} = case pk do
-                       [{name, type}] -> {name, type}
+      {name, type, default} = case pk do
+                       [{name, {type, default}}] -> {name, type, default}
                      end
 
-      Surge.Model.__attribute__(__MODULE__, name, type)
+      Surge.Model.__attribute__(__MODULE__, name, type, default)
       Surge.Model.__key__(__MODULE__, :hash, name, type)
     end
   end
 
   defmacro range(sort_key) do
     quote bind_quoted: [sort_key: sort_key] do
-      {name, type} = case sort_key do
-                       [{name, type}] -> {name, type}
+      {name, type, default} = case sort_key do
+                       [{name, {type, default}}] -> {name, type, default}
                      end
 
-      Surge.Model.__attribute__(__MODULE__, name, type)
+      Surge.Model.__attribute__(__MODULE__, name, type, default)
       Surge.Model.__key__(__MODULE__, :range, name, type)
     end
   end
@@ -84,11 +112,11 @@ defmodule Surge.Model do
     end
   end
 
-  def __attribute__(mod, name, type) do
+  def __attribute__(mod, name, type, default) do
     existing_attributes = Module.get_attribute(mod, :attributes)
     if Keyword.has_key?(existing_attributes, name) do
       raise ArgumentError, "Duplicate attribute #{name}"
     end
-    Module.put_attribute(mod, :attributes, {name, type})
+    Module.put_attribute(mod, :attributes, {name, {type, default}})
   end
 end
