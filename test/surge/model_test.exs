@@ -16,8 +16,10 @@ defmodule Surge.ModelTest do
     defmodule HashModel do
       use Surge.Model
       hash id: :string
+      throughput read: 10, write: 3
     end
     assert HashModel.__keys__ == [hash: {:id, :string}]
+    assert HashModel.__throughput__ == [10, 3]
   end
 
   test "HashRangeModel" do

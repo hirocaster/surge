@@ -78,6 +78,12 @@ defmodule Surge.Model do
     end
   end
 
+  defmacro throughput(read: read, write: write) do
+    quote do
+      Module.put_attribute(__MODULE__, :throughput, [unquote(read), unquote(write)])
+    end
+  end
+
   def __attribute__(mod, name, type) do
     existing_attributes = Module.get_attribute(mod, :attributes)
     if Keyword.has_key?(existing_attributes, name) do
