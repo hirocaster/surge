@@ -34,6 +34,7 @@ defmodule Surge.ModelTest do
     hash id: {:string, ""}
     range time: {:number, nil}
     attributes name: {:string, "foo"}, age: {:number, 0}
+    index local: Name, range: :name, projection: :keys
   end
 
   test "HashRangeModel" do

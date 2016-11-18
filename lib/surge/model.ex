@@ -13,6 +13,10 @@ defmodule Surge.Model do
       Module.put_attribute(__MODULE__, :throughput, [3,1])
       Module.register_attribute(__MODULE__, :attributes, accumulate: true)
       Module.put_attribute(__MODULE__, :keys, [hash: {:id, {:number, nil}}])
+      Module.put_attribute(__MODULE__, :secondary_keys, [])
+      Module.register_attribute(__MODULE__, :local_indexes, accumulate: true)
+      Module.register_attribute(__MODULE__, :global_indexes, accumulate: true)
+      Module.register_attribute(__MODULE__, :all_indexes_def, accumulate: true)
 
       import Surge.Model
       @before_compile unquote(__MODULE__)
@@ -27,14 +31,24 @@ defmodule Surge.Model do
     Module.put_attribute(target, :canonical_table_name, "#{namespace}.#{table_name}")
     Module.eval_quoted __CALLER__, [
       Surge.Model.__def_struct__(target),
+      Surge.Model.__def_indexes__(target),
       Surge.Model.__def_helper_funcs__(target)
     ]
   end
 
   def __def_struct__(mod) do
+    # canonical_table_name = Module.get_attribute(mod, :canonical_table_name)
+    # keys                 = Module.get_attribute(mod, :keys)
     attribs              = Module.get_attribute(mod, :attributes)
     fields               = attribs |> Enum.map(fn {name, {_type, default}} -> {name, default} end)
 
+    # meta = %{table: canonical_table_name,
+    #          keys: keys,
+    #          attributes: attribs}
+
+    # fields = [__meta__: Macro.escape(Macro.escape(meta))] ++ fields # double-escape for the doubly-quoted
+
+    # quote in quote because we eval_quoted the result of the function
     quote bind_quoted: [fields: fields] do
       quote do
         defstruct unquote(fields)
@@ -42,19 +56,85 @@ defmodule Surge.Model do
     end
   end
 
+  def __def_indexes__(mod) do
+    namespace       = Module.get_attribute(mod, :namespace)
+    table           = Module.get_attribute(mod, :canonical_table_name)
+    table_keys      = Module.get_attribute(mod, :keys)
+    table_atts      = Module.get_attribute(mod, :attributes)
+    all_indexes_def = Module.get_attribute(mod, :all_indexes_def)
+    all_indexes_def |> Enum.each(&Surge.Model.__def_index__(mod, namespace, table, table_keys, table_atts, &1))
+  end
+
+  def __def_index__(mod, namespace, _table, table_keys, table_atts, [{index_type, index_name} | rest]) do
+    [hash: {hash,_}, range: {range,_}] = table_keys
+    hash  = Keyword.get(rest, :hash, hash)
+    range = Keyword.get(rest, :range, range)
+    projection_type = Keyword.get(rest, :projection, :keys)
+    projection = projection(projection_type)
+    index_name = index_name |> Atom.to_string |> String.split(".") |> List.last
+    index_def = %{
+      index_name: "#{namespace}.indexes.#{index_name}",
+      key_schema: [%{attribute_name: hash, key_type: "HASH"},
+        %{attribute_name: range, key_type: "RANGE"}],
+      projection: projection
+    }
+
+
+    case index_type do
+      :local ->
+        {type, _default} = table_atts[range]
+        Surge.Model.__secondary_key__(mod, range, type)
+        Module.put_attribute(mod, :local_indexes, Macro.escape(index_def))
+        :local
+      :global ->
+        [read: read, write: write] = Keyword.get(rest, :throughput, [read: 2, write: 1])
+        index_def = Map.put(index_def, :provisioned_throughput, %{
+          read_capacity_units: read,
+          write_capacity_units: write,
+        })
+        Module.put_attribute(mod, :global_indexes, Macro.escape(index_def))
+        :global
+    end
+
+    # fields = table_atts |> Enum.map(fn {name, type} -> {name, Type.default_value(type)} end)
+    # meta = %IndexMetadata{ type: index_type, table: table, keys: [hash, range], name: index_name,
+    #    attributes: []}
+    # fields = [__meta__: Macro.escape(Macro.escape(meta))] ++ fields # double-escape for the doubly-quoted
+
+    # quote bind_quoted: [fields: fields, index_name: index_name] do
+    #   quote do
+    #     defmodule unquote(index_name) do
+    #       defstruct unquote(fields)
+    #     end
+    #   end
+    # end
+  end
+
+  defp projection(:keys), do: %{projection_type: "KEYS_ONLY"}
+  defp projection(:all), do: %{projection_type: "ALL"}
+  defp projection(atts) when is_list(atts) do
+    %{projection_type: "INCLUDE", non_key_attributes: atts |> Enum.map(&Atom.to_string(&1))}
+  end
+
   def __def_helper_funcs__(mod) do
     namespace            = Module.get_attribute(mod, :namespace)
     canonical_table_name = Module.get_attribute(mod, :canonical_table_name)
     keys                 = Module.get_attribute(mod, :keys)
+    secondary_keys       = Module.get_attribute(mod, :secondary_keys)
     attribs              = Module.get_attribute(mod, :attributes)
     throughput           = Module.get_attribute(mod, :throughput)
+    local_indexes        = Module.get_attribute(mod, :local_indexes)
+    global_indexes       = Module.get_attribute(mod, :global_indexes)
 
     quote do
       def __namespace__, do: unquote(namespace)
       def __canonical_name__, do: unquote(canonical_table_name)
+      def __secondary_keys__, do: unquote(secondary_keys)
       def __keys__, do: unquote(keys)
       def __attributes__, do: unquote(attribs)
       def __throughput__, do: unquote(throughput)
+      def __local_indexes__, do: unquote(local_indexes)
+      def __global_indexes__, do: unquote(global_indexes)
     end
   end
 
@@ -66,6 +146,15 @@ defmodule Surge.Model do
       |> Enum.sort
 
     Module.put_attribute(mod, :keys, updated_keys)
+  end
+
+  def __secondary_key__(mod, name, type) do
+    updated_secondary_keys = mod
+      |> Module.get_attribute(:secondary_keys)
+      |> Keyword.delete(name)
+      |> Keyword.put(name, type)
+      |> Enum.sort
+    Module.put_attribute(mod, :secondary_keys, updated_secondary_keys)
   end
 
   defmacro attributes(decl) do
@@ -118,5 +207,11 @@ defmodule Surge.Model do
       raise ArgumentError, "Duplicate attribute #{name}"
     end
     Module.put_attribute(mod, :attributes, {name, {type, default}})
+  end
+
+  defmacro index(kw_list) do
+    quote do
+      Module.put_attribute(__MODULE__, :all_indexes_def, unquote(kw_list))
+    end
   end
 end
