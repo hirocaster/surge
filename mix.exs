@@ -16,7 +16,12 @@ defmodule Surge.Mixfile do
   #
   # Type "mix help compile.app" for more information
   def application do
-    [applications: [:logger]]
+    [applications: [
+        :logger,
+        :ex_aws,
+        :poison,
+        :hackney
+      ]]
   end
 
   # Dependencies can be Hex packages:
@@ -30,6 +35,10 @@ defmodule Surge.Mixfile do
   # Type "mix help deps" for more examples and options
   defp deps do
     [
+      {:ex_aws, git: "https://github.com/CargoSense/ex_aws.git"},
+      {:poison, "~> 2.0"},
+      {:hackney, "~> 1.6"},
+      {:dialyxir, "~> 0.4", only: [:dev]},
       {:ex_doc, "~> 0.14", only: :dev},
       {:credo, "~> 0.5", only: :dev}
     ]
