@@ -8,7 +8,7 @@ defmodule Surge.DDL do
     secondary_keys        = model.__secondary_keys__
     global_keys           = model.__global_keys__
     keys_schema           = pk_schema(keys)
-    attribute_definitions = pk_spec(keys) ++ secondary_keys ++ global_keys
+    attribute_definitions = pk_spec(keys) ++ secondary_keys ++ global_keys |> Enum.uniq
     [read, write]         = model.__throughput__
     local_indexes         = model.__local_indexes__
     global_indexes        = model.__global_indexes__
@@ -31,14 +31,62 @@ defmodule Surge.DDL do
 
   def update_table(model) do
     table_name            = model.__table_name__
+    keys                  = model.__keys__
+    secondary_keys        = model.__secondary_keys__
+    global_keys           = model.__global_keys__
+    attribute_definitions = pk_spec(keys) ++ secondary_keys ++ global_keys
     [read, write]         = model.__throughput__
 
-    attributes = %{
-      "ProvisionedThroughput" => %{
-        "ReadCapacityUnits"  => read,
-        "WriteCapacityUnits" => write
+    attributes = %{}
+
+    eixist_attribute_definitions = describe_table(model)["AttributeDefinitions"]
+    exisst_attribute_names = Enum.map(eixist_attribute_definitions, &(String.to_atom(&1["AttributeName"]))) # [:id, :time]
+
+    update_attr = Enum.reject(attribute_definitions, fn({key, _}) -> Enum.member?(exisst_attribute_names, key) end)
+
+    if Enum.count(update_attr) > 0 do
+      update_attributes = %{
+        "AttributeDefinitions" => update_attr |> encode_key_definitions,
       }
-    }
+      attributes = Map.merge(attributes, update_attributes)
+    end
+
+
+    table_info = describe_table(model)
+    exist_read  = Map.get(table_info["ProvisionedThroughput"], "ReadCapacityUnits")
+    exist_write = Map.get(table_info["ProvisionedThroughput"], "WriteCapacityUnits")
+
+    unless [exist_read, exist_write] == [read, write] do
+      update_previsioned_throughput = %{"ProvisionedThroughput" => %{
+                                       "ReadCapacityUnits"  => read,
+                                       "WriteCapacityUnits" => write
+                                     }}
+      attributes = Map.merge(attributes, update_previsioned_throughput)
+    end
+
+
+    global_indexes = model.__global_indexes__
+
+    case describe_table(model)["GlobalSecondaryIndexes"] do
+      nil ->
+        if Enum.count(global_indexes) > 0 do
+
+          indexes = for global_index <- global_indexes do
+            %{"Create" => global_index}
+          end
+
+          global_secondary_index_updates = %{
+            "GlobalSecondaryIndexUpdates" => indexes
+          }
+          attributes = Map.merge(attributes, global_secondary_index_updates)
+        else
+          nil
+        end
+
+      index_of_list when is_list(index_of_list) ->
+        # diff
+        exist_index_name_of_list = Enum.map(index_of_list, &(&1["IndexName"]))
+    end
 
     table_name
     |> ExAws.Dynamo.update_table(attributes)
@@ -59,5 +107,11 @@ defmodule Surge.DDL do
   end
   defp pk_spec([hash: {hname, htype}]) do
     [{hname, htype}]
+  end
+
+  defp encode_key_definitions(attrs) do
+    attrs |> Enum.map(fn({name, type}) ->
+      %{"AttributeName" => name, "AttributeType" => type |> ExAws.Dynamo.Encoder.atom_to_dynamo_type}
+    end)
   end
 end

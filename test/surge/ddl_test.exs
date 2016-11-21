@@ -29,6 +29,7 @@ defmodule Surge.DDLTest do
 
     assert UpdateHashModel.__throughput__ == [10, 3]
 
+    describe_table UpdateHashModel
     update_table UpdateHashModel
 
     updated_table_info = describe_table UpdateHashModel
@@ -53,6 +54,7 @@ defmodule Surge.DDLTest do
 
     delete_table HashRangeModel
     {:ok, _} = create_table HashRangeModel
+
 
     table_info = describe_table HashRangeModel
 
@@ -79,6 +81,37 @@ defmodule Surge.DDLTest do
                                                                 "WriteCapacityUnits" => 2}
 
     {:ok, _} = delete_table HashRangeModel
+  end
+
+  test "GlobalIndexModel" do
+    defmodule GlobalIndexModel do
+      use Surge.Model
+      hash id: {:string, ""}
+      range time: {:number, nil}
+      attributes name: {:string, "foo"}, age: {:number, 0}, address: {:string, "example.st"}, sex: {:string, ""}
+    end
+
+    delete_table GlobalIndexModel
+    create_table GlobalIndexModel
+
+    defmodule AddGlobalIndexModel do
+      use Surge.Model
+      table_name "Surge.Test.GlobalIndexModel"
+      hash id: {:string, ""}
+      range time: {:number, nil}
+      attributes name: {:string, "foo"}, age: {:number, 0}, address: {:string, "example.st"}, sex: {:string, ""}
+      index global: :age_sex, hash: :age, projection: :keys, throughput: [read: 5, write: 2]
+    end
+
+    update_table AddGlobalIndexModel
+    table_info = describe_table AddGlobalIndexModel
+
+    global_secondary_index = List.first(table_info["GlobalSecondaryIndexes"])
+    assert global_secondary_index["IndexName"] == "Surge.Test.GlobalIndexModel.indexes.age_sex"
+    assert global_secondary_index["KeySchema"] == [%{"AttributeName" => "age", "KeyType" => "HASH"}]
+    assert global_secondary_index["ProvisionedThroughput"] == %{"ReadCapacityUnits" => 5,
+                                                                "WriteCapacityUnits" => 2}
+
   end
 
   test "No Table" do
