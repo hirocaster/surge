@@ -77,28 +77,49 @@ defmodule Surge.Model do
   end
 
   def __def_index__(mod, table_name, table_keys, table_atts, [{index_type, index_name} | rest]) do
-    [hash: {hash,_}, range: {range,_}] = table_keys
-    hash  = Keyword.get(rest, :hash, hash)
-    range = Keyword.get(rest, :range, range)
-    projection_type = Keyword.get(rest, :projection, :keys)
-    projection = projection(projection_type)
-    index_name = index_name |> Atom.to_string |> String.split(".") |> List.last
-    index_def = %{
-      index_name: "#{table_name}.indexes.#{index_name}",
-      key_schema: [%{attribute_name: hash, key_type: "HASH"},
-        %{attribute_name: range, key_type: "RANGE"}],
-      projection: projection
-    }
-
     case index_type do
       :local ->
+        [hash: {hash,_}, range: {range,_}] = table_keys
+        hash  = Keyword.get(rest, :hash, hash)
+        range = Keyword.get(rest, :range, range)
+        projection_type = Keyword.get(rest, :projection, :keys)
+        projection = projection(projection_type)
+        index_name = index_name |> Atom.to_string |> String.split(".") |> List.last
+        index_def = %{
+          index_name: "#{table_name}.indexes.#{index_name}",
+          key_schema: [%{attribute_name: hash, key_type: "HASH"},
+                       %{attribute_name: range, key_type: "RANGE"}],
+          projection: projection
+        }
         {type, _default} = table_atts[range]
         Surge.Model.__secondary_key__(mod, range, type)
         Module.put_attribute(mod, :local_indexes, Macro.escape(index_def))
         :local
       :global ->
-        {type, _default} = table_atts[range]
-        Surge.Model.__global_key__(mod, range, type)
+        [hash: {hash,_}, range: {range,_}] = table_keys
+        hash  = Keyword.get(rest, :hash, hash)
+        range = Keyword.get(rest, :range, nil)
+        projection_type = Keyword.get(rest, :projection, :keys)
+        projection = projection(projection_type)
+        index_name = index_name |> Atom.to_string |> String.split(".") |> List.last
+
+        {hash_type, _default} = table_atts[hash]
+        Surge.Model.__global_key__(mod, hash, hash_type)
+
+        key_schema = if range do
+          {range_type, _default} = table_atts[range]
+          Surge.Model.__global_key__(mod, range, range_type)
+          [%{attribute_name: hash, key_type: "HASH"},
+           %{attribute_name: range, key_type: "RANGE"}]
+        else
+            [%{attribute_name: hash, key_type: "HASH"}]
+        end
+
+        index_def = %{
+          index_name: "#{table_name}.indexes.#{index_name}",
+          key_schema: key_schema,
+          projection: projection
+        }
         [read: read, write: write] = Keyword.get(rest, :throughput, [read: 2, write: 1])
         index_def = Map.put(index_def, :provisioned_throughput, %{
           read_capacity_units: read,
