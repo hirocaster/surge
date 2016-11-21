@@ -9,13 +9,30 @@ defmodule Surge.DDLTest do
       hash id: {:string, ""}
     end
 
-    create_table  HashModel
+    create_table HashModel
 
     table_info = describe_table HashModel
     assert table_info["AttributeDefinitions"] == [%{"AttributeName" => "id", "AttributeType" => "S"}]
     assert table_info["KeySchema"] == [%{"AttributeName" => "id", "KeyType" => "HASH"}]
     assert Map.get(table_info["ProvisionedThroughput"], "ReadCapacityUnits") == 3
     assert Map.get(table_info["ProvisionedThroughput"], "WriteCapacityUnits") == 1
+
+    assert HashModel.__throughput__ == [3, 1]
+
+    # TODO: Fix warning
+    defmodule HashModel do
+      use Surge.Model
+      hash id: {:string, ""}
+      throughput read: 10, write: 3
+    end
+
+    assert HashModel.__throughput__ == [10, 3]
+
+    update_table HashModel
+
+    updated_table_info = describe_table HashModel
+    assert Map.get(updated_table_info["ProvisionedThroughput"], "ReadCapacityUnits") == 10
+    assert Map.get(updated_table_info["ProvisionedThroughput"], "WriteCapacityUnits") == 3
 
     delete_table HashModel
   end
