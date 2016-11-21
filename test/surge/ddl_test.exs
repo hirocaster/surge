@@ -9,6 +9,7 @@ defmodule Surge.DDLTest do
       hash id: {:string, ""}
     end
 
+    delete_table HashModel
     create_table HashModel
 
     table_info = describe_table HashModel
@@ -19,18 +20,18 @@ defmodule Surge.DDLTest do
 
     assert HashModel.__throughput__ == [3, 1]
 
-    # TODO: Fix warning
-    defmodule HashModel do
+    defmodule UpdateHashModel do
       use Surge.Model
+      table_name "Surge.Test.HashModel"
       hash id: {:string, ""}
       throughput read: 10, write: 3
     end
 
-    assert HashModel.__throughput__ == [10, 3]
+    assert UpdateHashModel.__throughput__ == [10, 3]
 
-    update_table HashModel
+    update_table UpdateHashModel
 
-    updated_table_info = describe_table HashModel
+    updated_table_info = describe_table UpdateHashModel
     assert Map.get(updated_table_info["ProvisionedThroughput"], "ReadCapacityUnits") == 10
     assert Map.get(updated_table_info["ProvisionedThroughput"], "WriteCapacityUnits") == 3
 
@@ -49,6 +50,7 @@ defmodule Surge.DDLTest do
       index local: :address, range: :address, projection: :all
     end
 
+    delete_table HashRangeModel
     {:ok, _} = create_table HashRangeModel
 
     table_info = describe_table HashRangeModel

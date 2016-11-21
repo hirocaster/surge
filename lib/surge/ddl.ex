@@ -3,7 +3,7 @@ defmodule Surge.DDL do
   require Surge.Exceptions
 
   def create_table(model) do
-    table_name            = model.__canonical_name__
+    table_name            = model.__table_name__
     keys                  = model.__keys__
     secondary_keys        = model.__secondary_keys__
     keys_schema           = pk_schema(keys)
@@ -18,7 +18,7 @@ defmodule Surge.DDL do
   end
 
   def describe_table(model) do
-    case model.__canonical_name__
+    case model.__table_name__
     |> ExAws.Dynamo.describe_table
     |> ExAws.request do
       {:ok, map} when is_map(map)->
@@ -29,7 +29,7 @@ defmodule Surge.DDL do
   end
 
   def update_table(model) do
-    table_name            = model.__canonical_name__
+    table_name            = model.__table_name__
     [read, write]         = model.__throughput__
 
     attributes = %{
@@ -45,7 +45,7 @@ defmodule Surge.DDL do
   end
 
   def delete_table(model) do
-    model.__canonical_name__
+    model.__table_name__
     |> ExAws.Dynamo.delete_table
     |> ExAws.request
   end
