@@ -1,15 +1,27 @@
 defmodule Surge.Model do
   defmacro __using__(_) do
     quote do
-      default_namespace = Application.get_env(:surge, :namespace, "surge")
+
+      app_namespace = __MODULE__
+      |> Atom.to_string
+      |> String.split(".")
+      |> List.delete_at(0)
+      |> List.first
+
+      mix_env = Mix.env
+      |> Atom.to_string
+      |> Macro.camelize
+
+      default_namespace = Application.get_env(:surge, :namespace, "#{app_namespace}.#{mix_env}")
 
       table_name = __MODULE__
       |> Atom.to_string
       |> String.split(".")
       |> List.last
 
-      Module.put_attribute(__MODULE__, :namespace, default_namespace)
-      Module.put_attribute(__MODULE__, :table_name, table_name)
+      default_table_name = "#{default_namespace}.#{table_name}"
+
+      Module.put_attribute(__MODULE__, :table_name, default_table_name)
       Module.put_attribute(__MODULE__, :throughput, [3,1])
       Module.register_attribute(__MODULE__, :attributes, accumulate: true)
       Module.put_attribute(__MODULE__, :keys, [hash: {:id, {:number, nil}}])
@@ -26,9 +38,9 @@ defmodule Surge.Model do
   defmacro __before_compile__(env) do
     target = env.module
 
-    namespace = Module.get_attribute(target, :namespace)
     table_name = Module.get_attribute(target, :table_name)
-    Module.put_attribute(target, :canonical_table_name, "#{namespace}.#{table_name}")
+    Module.put_attribute(target, :table_name, table_name)
+
     Module.eval_quoted __CALLER__, [
       Surge.Model.__def_struct__(target),
       Surge.Model.__def_indexes__(target),
@@ -37,7 +49,6 @@ defmodule Surge.Model do
   end
 
   def __def_struct__(mod) do
-    # canonical_table_name = Module.get_attribute(mod, :canonical_table_name)
     # keys                 = Module.get_attribute(mod, :keys)
     attribs              = Module.get_attribute(mod, :attributes)
     fields               = attribs |> Enum.map(fn {name, {_type, default}} -> {name, default} end)
@@ -57,15 +68,14 @@ defmodule Surge.Model do
   end
 
   def __def_indexes__(mod) do
-    namespace       = Module.get_attribute(mod, :namespace)
-    table           = Module.get_attribute(mod, :canonical_table_name)
+    table_name      = Module.get_attribute(mod, :table_name)
     table_keys      = Module.get_attribute(mod, :keys)
     table_atts      = Module.get_attribute(mod, :attributes)
     all_indexes_def = Module.get_attribute(mod, :all_indexes_def)
-    all_indexes_def |> Enum.each(&Surge.Model.__def_index__(mod, namespace, table, table_keys, table_atts, &1))
+    all_indexes_def |> Enum.each(&Surge.Model.__def_index__(mod, table_name, table_keys, table_atts, &1))
   end
 
-  def __def_index__(mod, namespace, _table, table_keys, table_atts, [{index_type, index_name} | rest]) do
+  def __def_index__(mod, table_name, table_keys, table_atts, [{index_type, index_name} | rest]) do
     [hash: {hash,_}, range: {range,_}] = table_keys
     hash  = Keyword.get(rest, :hash, hash)
     range = Keyword.get(rest, :range, range)
@@ -73,7 +83,7 @@ defmodule Surge.Model do
     projection = projection(projection_type)
     index_name = index_name |> Atom.to_string |> String.split(".") |> List.last
     index_def = %{
-      index_name: "#{namespace}.indexes.#{index_name}",
+      index_name: "#{table_name}.indexes.#{index_name}",
       key_schema: [%{attribute_name: hash, key_type: "HASH"},
         %{attribute_name: range, key_type: "RANGE"}],
       projection: projection
@@ -117,8 +127,7 @@ defmodule Surge.Model do
   end
 
   def __def_helper_funcs__(mod) do
-    namespace            = Module.get_attribute(mod, :namespace)
-    canonical_table_name = Module.get_attribute(mod, :canonical_table_name)
+    table_name           = Module.get_attribute(mod, :table_name)
     keys                 = Module.get_attribute(mod, :keys)
     secondary_keys       = Module.get_attribute(mod, :secondary_keys)
     attribs              = Module.get_attribute(mod, :attributes)
@@ -127,8 +136,7 @@ defmodule Surge.Model do
     global_indexes       = Module.get_attribute(mod, :global_indexes)
 
     quote do
-      def __namespace__, do: unquote(namespace)
-      def __canonical_name__, do: unquote(canonical_table_name)
+      def __table_name__, do: unquote(table_name)
       def __secondary_keys__, do: unquote(secondary_keys)
       def __keys__, do: unquote(keys)
       def __attributes__, do: unquote(attribs)
@@ -171,6 +179,16 @@ defmodule Surge.Model do
                      end
       Surge.Model.__attribute__(__MODULE__, name, type, default)
     end
+  end
+
+  defmacro table_name(table_name) do
+    quote bind_quoted: [table_name: table_name] do
+      Surge.Model.__table_name__(__MODULE__, table_name)
+    end
+  end
+
+  def __table_name__(mod, table_name) do
+    Module.put_attribute(mod, :table_name, table_name)
   end
 
   defmacro hash(pk) do

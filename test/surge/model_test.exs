@@ -5,10 +5,8 @@ defmodule Surge.ModelTest do
     defmodule EmptyModel do
       use Surge.Model
     end
-    namespace = Application.get_env(:surge, :namespace) || "surge"
-    assert EmptyModel.__namespace__ == namespace
     assert EmptyModel.__keys__ == [hash: {:id, {:number, nil}}]
-    assert EmptyModel.__canonical_name__ == "#{namespace}.EmptyModel"
+    assert EmptyModel.__table_name__ == "Surge.Test.EmptyModel"
     assert EmptyModel.__throughput__ == [3, 1]
   end
 
