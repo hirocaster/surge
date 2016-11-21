@@ -28,6 +28,22 @@ defmodule Surge.DDL do
     end
   end
 
+  def update_table(model) do
+    table_name            = model.__canonical_name__
+    [read, write]         = model.__throughput__
+
+    attributes = %{
+      "ProvisionedThroughput" => %{
+        "ReadCapacityUnits"  => read,
+        "WriteCapacityUnits" => write
+      }
+    }
+
+    table_name
+    |> ExAws.Dynamo.update_table(attributes)
+    |> ExAws.request
+  end
+
   def delete_table(model) do
     model.__canonical_name__
     |> ExAws.Dynamo.delete_table
