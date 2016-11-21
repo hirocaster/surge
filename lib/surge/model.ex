@@ -26,6 +26,7 @@ defmodule Surge.Model do
       Module.register_attribute(__MODULE__, :attributes, accumulate: true)
       Module.put_attribute(__MODULE__, :keys, [hash: {:id, {:number, nil}}])
       Module.put_attribute(__MODULE__, :secondary_keys, [])
+      Module.put_attribute(__MODULE__, :global_keys, [])
       Module.register_attribute(__MODULE__, :local_indexes, accumulate: true)
       Module.register_attribute(__MODULE__, :global_indexes, accumulate: true)
       Module.register_attribute(__MODULE__, :all_indexes_def, accumulate: true)
@@ -89,7 +90,6 @@ defmodule Surge.Model do
       projection: projection
     }
 
-
     case index_type do
       :local ->
         {type, _default} = table_atts[range]
@@ -97,6 +97,8 @@ defmodule Surge.Model do
         Module.put_attribute(mod, :local_indexes, Macro.escape(index_def))
         :local
       :global ->
+        {type, _default} = table_atts[range]
+        Surge.Model.__global_key__(mod, range, type)
         [read: read, write: write] = Keyword.get(rest, :throughput, [read: 2, write: 1])
         index_def = Map.put(index_def, :provisioned_throughput, %{
           read_capacity_units: read,
@@ -130,6 +132,7 @@ defmodule Surge.Model do
     table_name           = Module.get_attribute(mod, :table_name)
     keys                 = Module.get_attribute(mod, :keys)
     secondary_keys       = Module.get_attribute(mod, :secondary_keys)
+    global_keys          = Module.get_attribute(mod, :global_keys)
     attribs              = Module.get_attribute(mod, :attributes)
     throughput           = Module.get_attribute(mod, :throughput)
     local_indexes        = Module.get_attribute(mod, :local_indexes)
@@ -138,6 +141,7 @@ defmodule Surge.Model do
     quote do
       def __table_name__, do: unquote(table_name)
       def __secondary_keys__, do: unquote(secondary_keys)
+      def __global_keys__, do: unquote(global_keys)
       def __keys__, do: unquote(keys)
       def __attributes__, do: unquote(attribs)
       def __throughput__, do: unquote(throughput)
@@ -163,6 +167,15 @@ defmodule Surge.Model do
       |> Keyword.put(name, type)
       |> Enum.sort
     Module.put_attribute(mod, :secondary_keys, updated_secondary_keys)
+  end
+
+  def __global_key__(mod, name, type) do
+    updated_global_keys = mod
+      |> Module.get_attribute(:global_keys)
+      |> Keyword.delete(name)
+      |> Keyword.put(name, type)
+      |> Enum.sort
+    Module.put_attribute(mod, :global_keys, updated_global_keys)
   end
 
   defmacro attributes(decl) do

@@ -6,8 +6,9 @@ defmodule Surge.DDL do
     table_name            = model.__table_name__
     keys                  = model.__keys__
     secondary_keys        = model.__secondary_keys__
+    global_keys           = model.__global_keys__
     keys_schema           = pk_schema(keys)
-    attribute_definitions = pk_spec(keys) ++ secondary_keys
+    attribute_definitions = pk_spec(keys) ++ secondary_keys ++ global_keys
     [read, write]         = model.__throughput__
     local_indexes         = model.__local_indexes__
     global_indexes        = model.__global_indexes__
