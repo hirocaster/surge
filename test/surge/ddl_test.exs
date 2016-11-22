@@ -103,7 +103,7 @@ defmodule Surge.DDLTest do
       index global: :age_sex, hash: :age, projection: :keys, throughput: [read: 5, write: 2]
     end
 
-    update_table AddGlobalIndexModel
+    {:ok, _} = update_table AddGlobalIndexModel
     table_info = describe_table AddGlobalIndexModel
 
     global_secondary_index = List.first(table_info["GlobalSecondaryIndexes"])
@@ -122,7 +122,9 @@ defmodule Surge.DDLTest do
       index global: :address_age, hash: :address, range: :age, projection: :keys, throughput: [read: 10, write: 4]
     end
 
-    update_table AddAddGlobalIndexModel
+    :timer.sleep(1000);
+    {:ok, _} = update_table AddAddGlobalIndexModel
+    :timer.sleep(1000);
     table_info = describe_table AddAddGlobalIndexModel
     assert Enum.count(table_info["GlobalSecondaryIndexes"]) == 2
 
@@ -135,7 +137,8 @@ defmodule Surge.DDLTest do
       index global: :address_age, hash: :address, range: :age, projection: :keys, throughput: [read: 10, write: 4]
     end
 
-    update_table DeleteGlobalIndexModel
+    {:ok, _} = update_table DeleteGlobalIndexModel
+    :timer.sleep(1000);
     table_info = describe_table DeleteGlobalIndexModel
     assert Enum.count(table_info["GlobalSecondaryIndexes"]) == 1
 

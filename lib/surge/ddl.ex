@@ -86,12 +86,7 @@ defmodule Surge.DDL do
       index_of_list when is_list(index_of_list) ->
 
         # diff create(model - db)
-        create_indexes = Enum.reject(global_indexes, fn(index) ->
-
-          Enum.find(index_of_list, nil, fn(exists_index) ->
-            index.index_name == exists_index["IndexName"]
-          end)
-        end)
+        create_indexes = diff_indexes(global_indexes, Surge.Util.camel_array_map_to_snake_array_map(index_of_list))
 
         indexes = for global_index <- create_indexes do
           %{"Create" => global_index}
@@ -102,12 +97,9 @@ defmodule Surge.DDL do
         attributes = Map.merge(attributes, global_secondary_index_updates)
 
         # diff delete index (db - model)
-        delete_indexes = Enum.reject(index_of_list, fn(exists_index) ->
-
-          Enum.find(global_indexes, nil, fn(model_index) ->
-            model_index.index_name == exists_index["IndexName"]
-          end)
-        end)
+        delete_indexes = index_of_list
+        |> Surge.Util.camel_array_map_to_snake_array_map
+        |> diff_indexes(global_indexes)
 
         if Enum.count(delete_indexes) > 0 do
           indexes = for global_index <- delete_indexes do
@@ -125,6 +117,13 @@ defmodule Surge.DDL do
     |> ExAws.request
   end
 
+  defp diff_indexes(base_indexes, subtraction_indexes) do
+    Enum.reject(base_indexes, fn(exists_index) ->
+      Enum.find(subtraction_indexes, nil, fn(subtraction_index) ->
+        subtraction_index.index_name == exists_index.index_name
+      end)
+    end)
+  end
 
   def delete_table(model) do
     model.__table_name__
