@@ -84,14 +84,47 @@ defmodule Surge.DDL do
         end
 
       index_of_list when is_list(index_of_list) ->
-        # diff
-        exist_index_name_of_list = Enum.map(index_of_list, &(&1["IndexName"]))
+
+        # diff create(model - db)
+        create_indexes = Enum.reject(global_indexes, fn(index) ->
+
+          Enum.find(index_of_list, nil, fn(exists_index) ->
+            index.index_name == exists_index["IndexName"]
+          end)
+        end)
+
+        indexes = for global_index <- create_indexes do
+          %{"Create" => global_index}
+        end
+        global_secondary_index_updates = %{
+          "GlobalSecondaryIndexUpdates" => indexes
+        }
+        attributes = Map.merge(attributes, global_secondary_index_updates)
+
+        # diff delete index (db - model)
+        delete_indexes = Enum.reject(index_of_list, fn(exists_index) ->
+
+          Enum.find(global_indexes, nil, fn(model_index) ->
+            model_index.index_name == exists_index["IndexName"]
+          end)
+        end)
+
+        if Enum.count(delete_indexes) > 0 do
+          indexes = for global_index <- delete_indexes do
+            %{"Delete" => global_index}
+          end
+          index_updates = %{
+            "GlobalSecondaryIndexUpdates" => indexes
+          }
+          attributes = Map.merge(attributes, index_updates)
+        end
     end
 
     table_name
     |> ExAws.Dynamo.update_table(attributes)
     |> ExAws.request
   end
+
 
   def delete_table(model) do
     model.__table_name__

@@ -112,6 +112,37 @@ defmodule Surge.DDLTest do
     assert global_secondary_index["ProvisionedThroughput"] == %{"ReadCapacityUnits" => 5,
                                                                 "WriteCapacityUnits" => 2}
 
+    defmodule AddAddGlobalIndexModel do
+      use Surge.Model
+      table_name "Surge.Test.GlobalIndexModel"
+      hash id: {:string, ""}
+      range time: {:number, nil}
+      attributes name: {:string, "foo"}, age: {:number, 0}, address: {:string, "example.st"}, sex: {:string, ""}
+      index global: :age_sex, hash: :age, projection: :keys, throughput: [read: 5, write: 2]
+      index global: :address_age, hash: :address, range: :age, projection: :keys, throughput: [read: 10, write: 4]
+    end
+
+    update_table AddAddGlobalIndexModel
+    table_info = describe_table AddAddGlobalIndexModel
+    assert Enum.count(table_info["GlobalSecondaryIndexes"]) == 2
+
+    defmodule DeleteGlobalIndexModel do
+      use Surge.Model
+      table_name "Surge.Test.GlobalIndexModel"
+      hash id: {:string, ""}
+      range time: {:number, nil}
+      attributes name: {:string, "foo"}, age: {:number, 0}, address: {:string, "example.st"}, sex: {:string, ""}
+      index global: :address_age, hash: :address, range: :age, projection: :keys, throughput: [read: 10, write: 4]
+    end
+
+    update_table DeleteGlobalIndexModel
+    table_info = describe_table DeleteGlobalIndexModel
+    assert Enum.count(table_info["GlobalSecondaryIndexes"]) == 1
+
+    global_secondary_index = List.first(table_info["GlobalSecondaryIndexes"])
+    assert global_secondary_index["IndexName"] == "Surge.Test.GlobalIndexModel.indexes.address_age"
+    assert global_secondary_index["ProvisionedThroughput"] == %{"ReadCapacityUnits" => 10,
+                                                                "WriteCapacityUnits" => 4}
   end
 
   test "No Table" do
