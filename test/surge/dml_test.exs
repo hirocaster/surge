@@ -20,5 +20,6 @@ defmodule Surge.DMLTest do
     assert Surge.DDL.describe_table(HashModel)["ItemCount"] == 1
 
     assert alice == get_item(HashModel, 1)
+    assert nil == get_item(HashModel, 999)
   end
 end

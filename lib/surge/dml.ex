@@ -12,7 +12,14 @@ defmodule Surge.DML do
 
     with req <- ExAws.Dynamo.get_item(table_name, [{name, hash}]),
          {:ok, result} <- ExAws.request(req),
-           decoded <- ExAws.Dynamo.decode_item(result, as: model),
+           decoded <- decode(result, model),
       do: decoded
+  end
+
+  defp decode(values, _) when values == %{} do
+    nil
+  end
+  defp decode(values, model) when is_map(values) do
+    ExAws.Dynamo.decode_item(values, as: model)
   end
 end
