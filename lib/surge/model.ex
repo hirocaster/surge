@@ -96,8 +96,7 @@ defmodule Surge.Model do
         Module.put_attribute(mod, :local_indexes, Macro.escape(index_def))
         :local
       :global ->
-        [hash: {hash,_}, range: {range,_}] = table_keys
-        hash  = Keyword.get(rest, :hash, hash)
+        hash  = rest[:hash]
         range = Keyword.get(rest, :range, nil)
         projection_type = Keyword.get(rest, :projection, :keys)
         projection = projection(projection_type)

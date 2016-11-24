@@ -83,6 +83,22 @@ defmodule Surge.DDLTest do
     {:ok, _} = delete_table HashRangeModel
   end
 
+  test "GlobalSecondaryIndex hash only" do
+    defmodule StaffTestModel do
+      use Surge.Model
+      hash id: {:number, nil}
+      attributes staff_id: {:number, nil}
+      index global: :staff_id, hash: :staff_id, projection: :keys
+    end
+
+    delete_table StaffTestModel
+    {:ok, _} = create_table StaffTestModel
+    table_info = describe_table StaffTestModel
+    global_secondary_index = List.first(table_info["GlobalSecondaryIndexes"])
+    assert global_secondary_index["IndexName"] == "Surge.Test.StaffTestModel.indexes.staff_id"
+    assert global_secondary_index["KeySchema"] == [%{"AttributeName" => "staff_id", "KeyType" => "HASH"}]
+  end
+
   test "GlobalIndexModel" do
     defmodule GlobalIndexModel do
       use Surge.Model
