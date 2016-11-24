@@ -20,7 +20,7 @@ defmodule Surge.Mixfile do
         :logger,
         :ex_aws,
         :poison,
-        :hackney
+        :httpoison
       ]]
   end
 
@@ -37,7 +37,7 @@ defmodule Surge.Mixfile do
     [
       {:ex_aws, git: "https://github.com/CargoSense/ex_aws.git"},
       {:poison, "~> 2.0"},
-      {:hackney, "~> 1.6"},
+      {:httpoison, "~> 0.10.0"},
       {:dialyxir, "~> 0.4", only: [:dev]},
       {:ex_doc, "~> 0.14", only: :dev},
       {:credo, "~> 0.5", only: :dev}
