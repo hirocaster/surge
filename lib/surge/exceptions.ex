@@ -26,3 +26,7 @@ defmodule Surge.Exceptions do
     end
   end
 end
+
+defmodule Surge.Exceptions.NoDefindedRangeException do
+  defexception message: "No defined range key"
+end

@@ -7,13 +7,31 @@ defmodule Surge.DML do
   end
 
   def get_item(model, hash) do
-    table_name = model.__table_name__
     {name, _}  = model.__keys__[:hash]
+    do_get_item(model, [{name, hash}])
+  end
 
-    with req <- ExAws.Dynamo.get_item(table_name, [{name, hash}]),
+  def get_item(model, hash, range) do
+    {hash_name, _}  = model.__keys__[:hash]
+    {range_name, _} = get_range_key!(model)
+
+    do_get_item(model, [{hash_name, hash}, {range_name, range}])
+  end
+
+  defp do_get_item(model, opts) do
+    table_name = model.__table_name__
+    with req <- ExAws.Dynamo.get_item(table_name, opts),
          {:ok, result} <- ExAws.request(req),
            decoded <- decode(result, model),
       do: decoded
+  end
+
+  defp get_range_key!(model) do
+    if model.__keys__[:range] do
+      model.__keys__[:range]
+    else
+      raise Surge.Exceptions.NoDefindedRangeException, "No defined range key in #{model}"
+    end
   end
 
   defp decode(values, _) when values == %{} do
