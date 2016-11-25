@@ -9,21 +9,24 @@ defmodule Surge.DML do
       do: result
   end
 
-  def get_item(model, hash) do
+  def get_item(hash: hash, from: model), do: get_item(hash: hash, from: model, opts: [])
+  def get_item(hash: hash, from: model, opts: opts) do
     {name, _}  = model.__keys__[:hash]
-    do_get_item(model, [{name, hash}])
+    do_get_item(model, [{name, hash}], opts)
   end
 
-  def get_item(model, hash, range) do
+  def get_item(hash: hash, range: range, from: model), do: get_item(hash: hash, range: range, from: model, opts: [])
+  def get_item(hash: hash, range: range, from: model, opts: opts) do
     {hash_name, _}  = model.__keys__[:hash]
     {range_name, _} = get_range_key!(model)
 
-    do_get_item(model, [{hash_name, hash}, {range_name, range}])
+    do_get_item(model, [{hash_name, hash}, {range_name, range}], opts)
   end
 
-  defp do_get_item(model, opts) do
+
+  defp do_get_item(model, keys, opts) do
     table_name = model.__table_name__
-    with req <- ExAws.Dynamo.get_item(table_name, opts),
+    with req <- ExAws.Dynamo.get_item(table_name, keys, opts),
          {:ok, result} <- ExAws.request(req),
            decoded <- decode(result, model),
       do: decoded
