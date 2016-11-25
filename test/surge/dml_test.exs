@@ -23,6 +23,11 @@ defmodule Surge.DMLTest do
     assert nil == get_item(HashModel, 999)
 
     assert_raise Surge.Exceptions.NoDefindedRangeException, fn -> get_item(HashModel, 999, 999) end
+
+    assert %{} == delete_item(hash: 1, from: HashModel)
+    assert Surge.DDL.describe_table(HashModel)["ItemCount"] == 0
+
+    assert %{} == delete_item(hash: 999, from: HashModel)
   end
 
   defmodule HashRangeModel do
@@ -43,5 +48,8 @@ defmodule Surge.DMLTest do
 
     assert alice == get_item(HashRangeModel, 1, 100)
     assert nil == get_item(HashRangeModel, 999, 999)
+
+    assert %{} == delete_item(hash: 1, range: 100, from: HashRangeModel)
+    assert Surge.DDL.describe_table(HashRangeModel)["ItemCount"] == 0
   end
 end
