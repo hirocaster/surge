@@ -49,15 +49,27 @@ defmodule Surge.QueryTest do
     Surge.DDL.delete_table HashRangeModel
     Surge.DDL.create_table HashRangeModel
 
-    Surge.DML.put_item(%HashRangeModel{id: 1, time: 99, name: "alice", age: 20}, into: HashRangeModel)
-    bob = %HashRangeModel{id: 2, time: 100, name: "bob", age: 20}
+    alice = %HashRangeModel{id: 2, time: 100, name: "alice", age: 20}
+    Surge.DML.put_item(alice, into: HashRangeModel)
+
+    bob = %HashRangeModel{id: 2, time: 200, name: "bob", age: 20}
     Surge.DML.put_item(bob, into: HashRangeModel)
 
-    result = Surge.Query.query(["#id = ? and #time >= ?", 2, 100], HashRangeModel)
+    result = Surge.Query.query(where: ["#id = ? and #time >= ?", 2, 100], for: HashRangeModel)
+
+    assert 2 == Enum.count(result)
+    assert [alice, bob] == result
+
+    result = Surge.Query.query(where: ["#id = ? and #time >= ?", 2, 100], for: HashRangeModel, limit: 1)
+
+    assert 1 == Enum.count(result)
+    assert alice == List.first(result)
+
+    result = Surge.Query.query(where: ["#id = ? and #time >= ?", 2, 100], for: HashRangeModel, limit: 1, order: :desec)
 
     assert 1 == Enum.count(result)
     assert bob == List.first(result)
-  end
+end
 
   test "raise invalid operator in query" do
     Surge.DDL.delete_table HashRangeModel
@@ -65,6 +77,6 @@ defmodule Surge.QueryTest do
 
     assert_raise Surge.Exceptions.ValidationException,
       "Invalid operator used in KeyConditionExpression: OR",
-      fn -> Surge.Query.query(["#id = ? OR #time >= ?", 2, 100], HashRangeModel) end
+      fn -> Surge.Query.query(where: ["#id = ? OR #time >= ?", 2, 100], for: HashRangeModel) end
   end
 end

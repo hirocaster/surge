@@ -2,8 +2,10 @@ defmodule Surge.Query do
 
   require Surge.Exceptions
 
-  def query([exp | values], model) do
-    query_param = build_query([exp | values], model)
+  def query(where: [exp | values], for: model), do: query(where: [exp | values], for: model, limit: nil, order: :asec)
+  def query(where: [exp | values], for: model, limit: limit), do: query(where: [exp | values], for: model, limit: limit, order: :asec)
+  def query(where: [exp | values], for: model, limit: limit, order: order) do
+    query_param = build_query([exp | values], model, limit, order)
 
     case request(query_param) do
       {:ok, result} ->
@@ -13,16 +15,36 @@ defmodule Surge.Query do
     end
   end
 
-  def build_query([exp | values], model) do
+  def build_query([exp | values], model, limit \\ nil, order \\ :asec) do
     table_name = model.__table_name__
 
     {key_condition_expression, attribute_values} = Surge.Query.expression_and_values(exp, values)
     attribute_names = Surge.Query.expression_attribute_names(exp, model)
 
-    ExAws.Dynamo.query(table_name,
+    opts = %{
       key_condition_expression: key_condition_expression,
       expression_attribute_values: attribute_values,
-      expression_attribute_names: attribute_names)
+      expression_attribute_names: attribute_names
+    } |> limit(limit) |> order(order)
+
+
+    ExAws.Dynamo.query(table_name, opts)
+  end
+
+  defp limit(opts, limit) do
+    if limit do
+      Map.merge(opts, %{limit: limit})
+    else
+      opts
+    end
+  end
+
+  defp order(opts, order) do
+    if order == :desec do
+      Map.merge(opts, %{scan_index_forward: false})
+    else
+      opts
+    end
   end
 
   defp decode(values, model) when is_map(values) do
