@@ -40,7 +40,10 @@ defmodule Surge.Mixfile do
       {:httpoison, "~> 0.10.0"},
       {:dialyxir, "~> 0.4", only: [:dev]},
       {:ex_doc, "~> 0.14", only: :dev},
-      {:credo, "~> 0.5", only: :dev}
+      {:credo, "~> 0.5", only: :dev},
+      {:cowboy, "~> 1.0.0"},
+      {:plug, "~> 1.0"},
+      {:json, "~> 1.0"}
     ]
   end
 
