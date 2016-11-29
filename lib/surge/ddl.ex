@@ -24,8 +24,8 @@ defmodule Surge.DDL do
     |> ExAws.request do
       {:ok, map} when is_map(map)->
         map["Table"]
-      {:error, message} ->
-        Surge.Exceptions.dynamic_raise message
+      {:error, msg} ->
+        Surge.Exceptions.dynamic_raise msg
     end
   end
 

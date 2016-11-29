@@ -1,20 +1,53 @@
 defmodule Surge.Query do
 
-  def expression_and_values(exp, values) do
-    question_replace_to_value_and_values_map(exp, %{},values, 1)
+  require Surge.Exceptions
+
+  def query([exp | values], model) do
+    query_param = build_query([exp | values], model)
+
+    case request(query_param) do
+      {:ok, result} ->
+        Enum.map(result["Items"], fn(item) -> decode(item, model) end)
+      {:error, msg} ->
+        Surge.Exceptions.dynamic_raise msg
+    end
   end
 
-  defp question_replace_to_value_and_values_map(exp, values_map, values, _) when values == [] do
-    {exp, values_map}
+  def build_query([exp | values], model) do
+    table_name = model.__table_name__
+
+    {key_condition_expression, attribute_values} = Surge.Query.expression_and_values(exp, values)
+    attribute_names = Surge.Query.expression_attribute_names(exp, model)
+
+    ExAws.Dynamo.query(table_name,
+      key_condition_expression: key_condition_expression,
+      expression_attribute_values: attribute_values,
+      expression_attribute_names: attribute_names)
   end
-  defp question_replace_to_value_and_values_map(exp, values_map, values, n) do
+
+  defp decode(values, model) when is_map(values) do
+    ExAws.Dynamo.decode_item(values, as: model)
+  end
+
+  defp request(query_param) do
+    query_param |> ExAws.request
+  end
+
+  def expression_and_values(exp, values) do
+    question_replace_to_value_and_values_list(exp, [],values, 1)
+  end
+
+  defp question_replace_to_value_and_values_list(exp, values_list, values, _) when values == [] do
+    {exp, values_list}
+  end
+  defp question_replace_to_value_and_values_list(exp, values_list, values, n) do
     value            = List.first(values)
-    added_values_map = Map.merge(values_map, %{":value#{n}" => value})
+    added_values_list = values_list ++ ["value#{n}": value]
     deleted_values   = List.delete(values, value)
 
     exp
     |> String.replace("?", ":value#{n}", global: false)
-    |> question_replace_to_value_and_values_map(added_values_map, deleted_values, n + 1)
+    |> question_replace_to_value_and_values_list(added_values_list, deleted_values, n + 1)
   end
 
 
@@ -29,8 +62,8 @@ defmodule Surge.Query do
     key_names_of_list
     |> Enum.map(fn(key) ->
       s_key = Atom.to_string(key)
-      %{"##{s_key}" => s_key}
-    end) |> Enum.reduce(fn(x, acc) -> Map.merge(x, acc) end)
+      ["##{s_key}": "#{s_key}"]
+    end) |> List.flatten
   end
 
   defp expression_using_keys(keys, key_condition_expression) do
