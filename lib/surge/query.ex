@@ -2,15 +2,17 @@ defmodule Surge.Query do
 
   require Surge.Exceptions
 
-  def query(where: [exp | values], for: model),
-    do: query(where: [exp | values], for: model, limit: nil, order: :asec, filter: nil)
-  def query(where: [exp | values], for: model, filter: filter),
-    do: query(where: [exp | values], for: model, limit: nil, order: :asec, filter: filter)
-  def query(where: [exp | values], for: model, limit: limit),
-    do: query(where: [exp | values], for: model, limit: limit, order: :asec, filter: nil)
-  def query(where: [exp | values], for: model, limit: limit, order: order),
-    do: query(where: [exp | values], for: model, limit: limit, order: order, filter: nil)
-  def query(where: [exp | values], for: model, limit: limit, order: order, filter: filter) do
+  def query(params) when is_list(params) do
+    where  = params[:where]
+    for    = params[:for]
+    limit  = params[:limit]  || nil
+    order  = params[:order]  || :asec
+    filter = params[:filter] || nil
+
+    do_query(where: where, for: for, limit: limit, order: order, filter: filter)
+  end
+
+  defp do_query(where: [exp | values], for: model, limit: limit, order: order, filter: filter) do
     [exp | values]
     |> build_query(model, limit, order, filter)
     |> request!(model)
@@ -31,8 +33,15 @@ defmodule Surge.Query do
     ExAws.Dynamo.query(table_name, opts)
   end
 
-  def scan(filter: [exp | values], for: model), do: scan(filter: [exp | values], for: model, limit: nil)
-  def scan(filter: [exp | values], for: model, limit: limit) do
+  def scan(params) when is_list(params) do
+    filter = params[:filter] || nil
+    for    = params[:for]
+    limit  = params[:limit]  || nil
+
+    do_scan(filter: filter, for: for, limit: limit)
+  end
+
+  defp do_scan(filter: [exp | values], for: model, limit: limit) do
     [exp | values]
     |> build_scan_query(model, limit)
     |> request!(model)
