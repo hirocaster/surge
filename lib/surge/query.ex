@@ -5,14 +5,9 @@ defmodule Surge.Query do
   def query(where: [exp | values], for: model), do: query(where: [exp | values], for: model, limit: nil, order: :asec)
   def query(where: [exp | values], for: model, limit: limit), do: query(where: [exp | values], for: model, limit: limit, order: :asec)
   def query(where: [exp | values], for: model, limit: limit, order: order) do
-    query_param = build_query([exp | values], model, limit, order)
-
-    case request(query_param) do
-      {:ok, result} ->
-        Enum.map(result["Items"], fn(item) -> decode(item, model) end)
-      {:error, msg} ->
-        Surge.Exceptions.dynamic_raise msg
-    end
+    [exp | values]
+    |> build_query(model, limit, order)
+    |> request!(model)
   end
 
   def build_query([exp | values], model, limit \\ nil, order \\ :asec) do
@@ -27,8 +22,29 @@ defmodule Surge.Query do
       expression_attribute_names: attribute_names
     } |> limit(limit) |> order(order)
 
-
     ExAws.Dynamo.query(table_name, opts)
+  end
+
+  def scan(filter: [exp | values], for: model), do: scan(filter: [exp | values], for: model, limit: nil)
+  def scan(filter: [exp | values], for: model, limit: limit) do
+    [exp | values]
+    |> build_scan_query(model, limit)
+    |> request!(model)
+  end
+
+  def build_scan_query([exp | values], model, limit \\ nil) do
+    table_name = model.__table_name__
+
+    {filter_expression, attribute_values} = Surge.Query.expression_and_values(exp, values)
+    attribute_names = Surge.Query.expression_attribute_names(exp, model)
+
+    opts = %{
+      filter_expression: filter_expression,
+      expression_attribute_values: attribute_values,
+      expression_attribute_names: attribute_names
+    } |> limit(limit)
+
+    ExAws.Dynamo.scan(table_name, opts)
   end
 
   defp limit(opts, limit) when is_nil(limit), do: opts
@@ -43,6 +59,15 @@ defmodule Surge.Query do
 
   defp decode(values, model) when is_map(values) do
     ExAws.Dynamo.decode_item(values, as: model)
+  end
+
+  defp request!(query_param, model) do
+    case request(query_param) do
+      {:ok, result} ->
+        Enum.map(result["Items"], fn(item) -> decode(item, model) end)
+      {:error, msg} ->
+        Surge.Exceptions.dynamic_raise msg
+    end
   end
 
   defp request(query_param) do

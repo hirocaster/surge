@@ -79,4 +79,37 @@ defmodule Surge.QueryTest do
       "Invalid operator used in KeyConditionExpression: OR",
       fn -> Surge.Query.query(where: ["#id = ? OR #time >= ?", 2, 100], for: HashRangeModel) end
   end
+
+  test "build_scan_query" do
+    expect = %{"ExpressionAttributeNames" => %{"#id": "id", "#time": "time"},
+               "ExpressionAttributeValues" => %{":value1" => %{"N" => "2"},
+                                                ":value2" => %{"N" => "100"}},
+               "FilterExpression" => "#id = :value1 and #time >= :value2",
+               "TableName" => "Surge.Test.HashRangeModel"}
+
+    query_param = Surge.Query.build_scan_query(["#id = ? and #time >= ?", 2, 100], HashRangeModel)
+
+    assert expect == query_param.data
+  end
+
+  test "scan" do
+    Surge.DDL.delete_table HashRangeModel
+    Surge.DDL.create_table HashRangeModel
+
+    alice = %HashRangeModel{id: 2, time: 100, name: "alice", age: 20}
+    Surge.DML.put_item(alice, into: HashRangeModel)
+
+    bob = %HashRangeModel{id: 2, time: 200, name: "bob", age: 20}
+    Surge.DML.put_item(bob, into: HashRangeModel)
+
+    result = Surge.Query.scan(filter: ["#id = ? and #time >= ?", 2, 100], for: HashRangeModel)
+
+    assert 2 == Enum.count(result)
+    assert [alice, bob] == result
+
+    result = Surge.Query.scan(filter: ["#id = ? and #time >= ?", 2, 100], for: HashRangeModel, limit: 1)
+
+    assert 1 == Enum.count(result)
+    assert alice == List.first(result)
+  end
 end
