@@ -31,20 +31,14 @@ defmodule Surge.Query do
     ExAws.Dynamo.query(table_name, opts)
   end
 
+  defp limit(opts, limit) when is_nil(limit), do: opts
   defp limit(opts, limit) do
-    if limit do
-      Map.merge(opts, %{limit: limit})
-    else
-      opts
-    end
+    Map.merge(opts, %{limit: limit})
   end
 
-  defp order(opts, order) do
-    if order == :desec do
+  defp order(opts, order) when order == :asec, do: opts
+  defp order(opts, order) when order == :desec do
       Map.merge(opts, %{scan_index_forward: false})
-    else
-      opts
-    end
   end
 
   defp decode(values, model) when is_map(values) do
@@ -71,7 +65,6 @@ defmodule Surge.Query do
     |> String.replace("?", ":value#{n}", global: false)
     |> question_replace_to_value_and_values_list(added_values_list, deleted_values, n + 1)
   end
-
 
   def expression_attribute_names(key_condition_expression, model) do
     model
