@@ -45,6 +45,20 @@ defmodule Surge.QueryTest do
     assert expect == query_param.data
   end
 
+  test "build_query + filter" do
+    expect = %{"ExpressionAttributeNames" => %{"#id": "id", "#time": "time", "#age": "age"},
+               "ExpressionAttributeValues" => %{":value1" => %{"N" => "2"},
+                                                ":value2" => %{"N" => "100"},
+                                                ":filter_value1" => %{"N" => "10"}},
+               "KeyConditionExpression" => "#id = :value1 and #time >= :value2",
+               "FilterExpression" => "#age >= :filter_value1",
+               "TableName" => "Surge.Test.HashRangeModel"}
+
+    query_param = Surge.Query.build_query(["#id = ? and #time >= ?", 2, 100], HashRangeModel, nil, :asec, ["#age >= ?", 10])
+
+    assert expect == query_param.data
+  end
+
   test "query" do
     Surge.DDL.delete_table HashRangeModel
     Surge.DDL.create_table HashRangeModel
@@ -52,13 +66,23 @@ defmodule Surge.QueryTest do
     alice = %HashRangeModel{id: 2, time: 100, name: "alice", age: 20}
     Surge.DML.put_item(alice, into: HashRangeModel)
 
-    bob = %HashRangeModel{id: 2, time: 200, name: "bob", age: 20}
+    bob = %HashRangeModel{id: 2, time: 200, name: "bob", age: 21}
     Surge.DML.put_item(bob, into: HashRangeModel)
 
     result = Surge.Query.query(where: ["#id = ? and #time >= ?", 2, 100], for: HashRangeModel)
 
     assert 2 == Enum.count(result)
     assert [alice, bob] == result
+
+    result = Surge.Query.query(where: ["#id = ? and #time >= ?", 2, 100], for: HashRangeModel, filter: ["#age >= ?", 10])
+
+    assert 2 == Enum.count(result)
+    assert [alice, bob] == result
+
+    result = Surge.Query.query(where: ["#id = ? and #time >= ?", 2, 100], for: HashRangeModel, filter: ["#age = ?", 21])
+
+    assert 1 == Enum.count(result)
+    assert [bob] == result
 
     result = Surge.Query.query(where: ["#id = ? and #time >= ?", 2, 100], for: HashRangeModel, limit: 1)
 

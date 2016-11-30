@@ -2,15 +2,21 @@ defmodule Surge.Query do
 
   require Surge.Exceptions
 
-  def query(where: [exp | values], for: model), do: query(where: [exp | values], for: model, limit: nil, order: :asec)
-  def query(where: [exp | values], for: model, limit: limit), do: query(where: [exp | values], for: model, limit: limit, order: :asec)
-  def query(where: [exp | values], for: model, limit: limit, order: order) do
+  def query(where: [exp | values], for: model),
+    do: query(where: [exp | values], for: model, limit: nil, order: :asec, filter: nil)
+  def query(where: [exp | values], for: model, filter: filter),
+    do: query(where: [exp | values], for: model, limit: nil, order: :asec, filter: filter)
+  def query(where: [exp | values], for: model, limit: limit),
+    do: query(where: [exp | values], for: model, limit: limit, order: :asec, filter: nil)
+  def query(where: [exp | values], for: model, limit: limit, order: order),
+    do: query(where: [exp | values], for: model, limit: limit, order: order, filter: nil)
+  def query(where: [exp | values], for: model, limit: limit, order: order, filter: filter) do
     [exp | values]
-    |> build_query(model, limit, order)
+    |> build_query(model, limit, order, filter)
     |> request!(model)
   end
 
-  def build_query([exp | values], model, limit \\ nil, order \\ :asec) do
+  def build_query([exp | values], model, limit \\ nil, order \\ :asec, filter \\ nil) do
     table_name = model.__table_name__
 
     {key_condition_expression, attribute_values} = Surge.Query.expression_and_values(exp, values)
@@ -20,7 +26,7 @@ defmodule Surge.Query do
       key_condition_expression: key_condition_expression,
       expression_attribute_values: attribute_values,
       expression_attribute_names: attribute_names
-    } |> limit(limit) |> order(order)
+    } |> filter(filter, model) |> limit(limit) |> order(order)
 
     ExAws.Dynamo.query(table_name, opts)
   end
@@ -45,6 +51,18 @@ defmodule Surge.Query do
     } |> limit(limit)
 
     ExAws.Dynamo.scan(table_name, opts)
+  end
+
+  defp filter(opts, filter, _model) when is_nil(filter), do: opts
+  defp filter(opts, [exp | values], model) do
+    {filter_expression, attribute_values} = Surge.Query.expression_and_values(exp, values, "filter_value")
+    attribute_names = Surge.Query.expression_attribute_names(exp, model)
+
+    Map.merge(opts, %{
+          filter_expression: filter_expression,
+          expression_attribute_names: opts.expression_attribute_names ++ attribute_names,
+          expression_attribute_values: opts.expression_attribute_values ++ attribute_values
+              })
   end
 
   defp limit(opts, limit) when is_nil(limit), do: opts
@@ -74,21 +92,21 @@ defmodule Surge.Query do
     query_param |> ExAws.request
   end
 
-  def expression_and_values(exp, values) do
-    question_replace_to_value_and_values_list(exp, [],values, 1)
+  def expression_and_values(exp, values, prefix \\ "value") do
+    question_replace_to_value_and_values_list(exp, [],values, 1, prefix)
   end
 
-  defp question_replace_to_value_and_values_list(exp, values_list, values, _) when values == [] do
+  defp question_replace_to_value_and_values_list(exp, values_list, values, _, _prefix) when values == [] do
     {exp, values_list}
   end
-  defp question_replace_to_value_and_values_list(exp, values_list, values, n) do
+  defp question_replace_to_value_and_values_list(exp, values_list, values, n, prefix) do
     value            = List.first(values)
-    added_values_list = values_list ++ ["value#{n}": value]
+    added_values_list = values_list ++ ["#{prefix}#{n}": value]
     deleted_values   = List.delete(values, value)
 
     exp
-    |> String.replace("?", ":value#{n}", global: false)
-    |> question_replace_to_value_and_values_list(added_values_list, deleted_values, n + 1)
+    |> String.replace("?", ":#{prefix}#{n}", global: false)
+    |> question_replace_to_value_and_values_list(added_values_list, deleted_values, n + 1, prefix)
   end
 
   def expression_attribute_names(key_condition_expression, model) do
