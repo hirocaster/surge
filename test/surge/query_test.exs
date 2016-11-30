@@ -69,7 +69,7 @@ defmodule Surge.QueryTest do
 
     assert 1 == Enum.count(result)
     assert bob == List.first(result)
-end
+  end
 
   test "raise invalid operator in query" do
     Surge.DDL.delete_table HashRangeModel
