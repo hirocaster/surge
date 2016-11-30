@@ -79,6 +79,16 @@ defmodule Surge.QueryTest do
     assert 2 == Enum.count(result)
     assert [alice, bob] == result
 
+    result = Surge.Query.query(where: ["#id = ? and #time >= ?", 2, 100], for: HashRangeModel, filter: ["#age >= ?", 10], order: :desec)
+
+    assert 2 == Enum.count(result)
+    assert [bob, alice] == result
+
+    result = Surge.Query.query(where: ["#id = ? and #time >= ?", 2, 100], for: HashRangeModel, filter: ["#age >= ?", 10], limit: 1)
+
+    assert 1 == Enum.count(result)
+    assert [alice] == result
+
     result = Surge.Query.query(where: ["#id = ? and #time >= ?", 2, 100], for: HashRangeModel, filter: ["#age = ?", 21])
 
     assert 1 == Enum.count(result)
@@ -93,6 +103,11 @@ defmodule Surge.QueryTest do
 
     assert 1 == Enum.count(result)
     assert bob == List.first(result)
+
+    result = Surge.Query.query(where: ["#id = ? and #time >= ?", 2, 100], for: HashRangeModel, order: :desec)
+
+    assert 2 == Enum.count(result)
+    assert [bob, alice] == result
   end
 
   test "raise invalid operator in query" do
