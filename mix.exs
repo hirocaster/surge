@@ -35,10 +35,10 @@ defmodule Surge.Mixfile do
   # Type "mix help deps" for more examples and options
   defp deps do
     [
-      {:ex_aws, git: "https://github.com/CargoSense/ex_aws.git"},
+      {:ex_aws, "~> 1.0.0-rc.4"},
       {:poison, "~> 2.0"},
       {:httpoison, "~> 0.10.0"},
-      {:dialyxir, "~> 0.4", only: [:dev]},
+      {:dialyxir, "~> 0.4", only: :dev},
       {:ex_doc, "~> 0.14", only: :dev},
       {:credo, "~> 0.5", only: :dev},
       {:cowboy, "~> 1.0.0"},
@@ -48,10 +48,12 @@ defmodule Surge.Mixfile do
   end
 
   defp package do
-    [ name: :surge,
+    [
+      name: :surge,
       files: ["lib", "mix.exs", "README*"],
       maintainers: ["hirocaster"],
       licenses: ["MIT"],
-      links: %{"GitHub" => "https://github.com/hirocaster/surge"} ]
+      links: %{"GitHub" => "https://github.com/hirocaster/surge"}
+    ]
   end
 end
