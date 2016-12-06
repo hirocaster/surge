@@ -16,7 +16,7 @@ defmodule Surge.DMLTest do
 
     alice = %HashModel{id: 1, name: "alice", age: 20}
 
-    assert %{} == put_item(alice, into: HashModel)
+    assert {:ok, alice} == put_item(alice, into: HashModel)
     assert Surge.DDL.describe_table(HashModel)["ItemCount"] == 1
 
     assert alice == get_item(hash: 1, from: HashModel)
@@ -43,8 +43,12 @@ defmodule Surge.DMLTest do
 
     alice = %HashRangeModel{id: 1, time: 100, name: "alice", age: 20}
 
-    assert %{} == put_item(alice, into: HashRangeModel)
+    assert {:ok, alice} == put_item(alice, into: HashRangeModel)
     assert Surge.DDL.describe_table(HashRangeModel)["ItemCount"] == 1
+
+    alice = %HashRangeModel{id: 1, time: 100, name: "alice", age: 20}
+
+    assert {:ok, alice} == put_item(alice, into: HashRangeModel, opts: [return_values: "ALL_OLD"])
 
     assert alice == get_item(hash: 1, range: 100, from: HashRangeModel)
     assert nil == get_item(hash: 999, range: 999, from: HashRangeModel)
