@@ -8,7 +8,7 @@ defmodule Surge.QueryTest do
     attributes name: {:string, "foo"}, age: {:number, 0}, address: {:string, "example.st"}, sex: {:string, ""}
     index local: :name, range: :name, projection: :keys
     index local: :age, range: :age, projection: [:age]
-    index local: :address, range: :address, projection: :all
+    index global: :address, hash: :address, projection: :all
     index global: :age_sex, hash: :age, range: :sex, projection: :keys, throughput: [read: 5, write: 2]
   end
 
@@ -54,7 +54,7 @@ defmodule Surge.QueryTest do
                "FilterExpression" => "#age >= :filter_value1",
                "TableName" => "Surge.Test.HashRangeModel"}
 
-    query_param = Surge.Query.build_query(["#id = ? and #time >= ?", 2, 100], HashRangeModel, nil, :asec, ["#age >= ?", 10])
+    query_param = Surge.Query.build_query(["#id = ? and #time >= ?", 2, 100], HashRangeModel, nil, nil, :asec, ["#age >= ?", 10])
 
     assert expect == query_param.data
   end
@@ -72,6 +72,9 @@ defmodule Surge.QueryTest do
     result = Surge.Query.query(where: ["#id = ? and #time >= ?", 2, 100], for: HashRangeModel)
 
     assert 2 == Enum.count(result)
+    assert [alice, bob] == result
+
+    result = Surge.Query.query(where: ["#address = ?", "example.st"], for: HashRangeModel, index: :address)
     assert [alice, bob] == result
 
     result = Surge.Query.query(where: ["#id = ? and #time >= ?", 2, 100], for: HashRangeModel, filter: ["#age >= ?", 10])

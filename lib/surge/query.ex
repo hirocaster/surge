@@ -5,21 +5,25 @@ defmodule Surge.Query do
   def query(params) when is_list(params) do
     where  = params[:where]
     for    = params[:for]
+    index  = params[:index]  || nil
     limit  = params[:limit]  || nil
     order  = params[:order]  || :asec
     filter = params[:filter] || nil
 
-    do_query(where: where, for: for, limit: limit, order: order, filter: filter)
+    do_query(where: where, for: for, index: index, limit: limit, order: order, filter: filter)
   end
 
-  defp do_query(where: [exp | values], for: model, limit: limit, order: order, filter: filter) do
+  defp do_query(where: [exp | values], for: model, index: index, limit: limit, order: order, filter: filter) do
     [exp | values]
-    |> build_query(model, limit, order, filter)
+    |> build_query(model, index, limit, order, filter)
     |> request!(model)
   end
 
-  def build_query([exp | values], model, limit \\ nil, order \\ :asec, filter \\ nil) do
+  def build_query([exp | values], model, index \\ nil, limit \\ nil, order \\ :asec, filter \\ nil) do
     table_name = model.__table_name__
+
+    indexes = Enum.map(model.__local_indexes__ ++ model.__global_indexes__, &(&1.index_name))
+    index_name = Enum.find(indexes, &(&1 |> String.split(".") |> List.last == index |> Atom.to_string))
 
     {key_condition_expression, attribute_values} = Surge.Query.expression_and_values(exp, values)
     attribute_names = Surge.Query.expression_attribute_names(exp, model)
@@ -28,7 +32,7 @@ defmodule Surge.Query do
       key_condition_expression: key_condition_expression,
       expression_attribute_values: attribute_values,
       expression_attribute_names: attribute_names
-    } |> filter(filter, model) |> limit(limit) |> order(order)
+    } |> index(index_name) |> filter(filter, model) |> limit(limit) |> order(order)
 
     ExAws.Dynamo.query(table_name, opts)
   end
@@ -60,6 +64,11 @@ defmodule Surge.Query do
     } |> limit(limit)
 
     ExAws.Dynamo.scan(table_name, opts)
+  end
+
+  defp index(opts, name) when is_nil(name), do: opts
+  defp index(opts, name) do
+    Map.merge(opts, %{index_name: name})
   end
 
   defp filter(opts, filter, _model) when is_nil(filter), do: opts
