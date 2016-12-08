@@ -5,7 +5,7 @@ defmodule Surge.DML do
   def put_item(value, into: model, opts: opts) do
     table_name = model.__table_name__
     with req <- ExAws.Dynamo.put_item(table_name, Map.from_struct(value), opts),
-         {:ok, result} <- ExAws.request(req),
+         {:ok, _} <- ExAws.request(req),
       do: {:ok, value}
   end
 
@@ -15,7 +15,7 @@ defmodule Surge.DML do
   def put_item!(value, into: model, opts: opts) do
     table_name = model.__table_name__
     with req <- ExAws.Dynamo.put_item(table_name, Map.from_struct(value), opts),
-         result <- ExAws.request!(req),
+         _ <- ExAws.request!(req),
       do: value
   end
 
