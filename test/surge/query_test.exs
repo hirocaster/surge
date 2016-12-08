@@ -6,8 +6,8 @@ defmodule Surge.QueryTest do
     hash id: {:number, nil}
     range time: {:number, nil}
     attributes name: {:string, "foo"}, age: {:number, 0}, address: {:string, "example.st"}, sex: {:string, ""}
-    index local: :name, range: :name, projection: :keys
-    index local: :age, range: :age, projection: [:age]
+    index local: :name, range: :name, projection: [:age]
+    index local: :age, range: :age, projection: :keys
     index global: :address, hash: :address, projection: :all
     index global: :age_sex, hash: :age, range: :sex, projection: :keys, throughput: [read: 5, write: 2]
   end
@@ -66,7 +66,7 @@ defmodule Surge.QueryTest do
     alice = %HashRangeModel{id: 2, time: 100, name: "alice", age: 20}
     Surge.DML.put_item(alice, into: HashRangeModel)
 
-    bob = %HashRangeModel{id: 2, time: 200, name: "bob", age: 21}
+    bob = %HashRangeModel{id: 2, time: 200, name: "bob", age: 21, sex: "M"}
     Surge.DML.put_item(bob, into: HashRangeModel)
 
     result = Surge.Query.query(where: ["#id = ? and #time >= ?", 2, 100], for: HashRangeModel)
@@ -76,6 +76,12 @@ defmodule Surge.QueryTest do
 
     result = Surge.Query.query(where: ["#address = ?", "example.st"], for: HashRangeModel, index: :address)
     assert [alice, bob] == result
+
+    result = Surge.Query.query(where: ["#id = ? and #name = ?", 2, "bob"], for: HashRangeModel, index: :name) |> List.first
+    assert bob != result
+    assert bob.age == result.age
+    assert bob.sex != result.sex
+    assert "" == result.sex # not projection
 
     result = Surge.Query.query(where: ["#id = ? and #time >= ?", 2, 100], for: HashRangeModel, filter: ["#age >= ?", 10])
 
