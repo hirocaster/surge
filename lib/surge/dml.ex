@@ -9,6 +9,16 @@ defmodule Surge.DML do
       do: {:ok, value}
   end
 
+  def put_item!(value, into: model) do
+    put_item!(value, into: model, opts: [])
+  end
+  def put_item!(value, into: model, opts: opts) do
+    table_name = model.__table_name__
+    with req <- ExAws.Dynamo.put_item(table_name, Map.from_struct(value), opts),
+         result <- ExAws.request!(req),
+      do: value
+  end
+
   def get_item(hash: hash, from: model), do: get_item(hash: hash, from: model, opts: [])
   def get_item(hash: hash, from: model, opts: opts) do
     {name, _}  = model.__keys__[:hash]

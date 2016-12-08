@@ -30,6 +30,16 @@ defmodule Surge.DMLTest do
     assert %{} == delete_item(hash: 999, from: HashModel)
   end
 
+  test "PutItem!" do
+    Surge.DDL.delete_table HashModel
+    Surge.DDL.create_table HashModel
+
+    alice = %HashModel{id: 1, name: "alice", age: 20}
+
+    assert alice == put_item!(alice, into: HashModel)
+    assert Surge.DDL.describe_table(HashModel)["ItemCount"] == 1
+  end
+
   defmodule HashRangeModel do
     use Surge.Model
     hash id: {:number, nil}
