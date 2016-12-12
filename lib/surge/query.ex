@@ -7,19 +7,20 @@ defmodule Surge.Query do
     for    = params[:for]
     index  = params[:index]  || nil
     limit  = params[:limit]  || nil
+    offset = params[:offset] || nil
     order  = params[:order]  || :asec
     filter = params[:filter] || nil
 
-    do_query(where: where, for: for, index: index, limit: limit, order: order, filter: filter)
+    do_query(where: where, for: for, index: index, limit: limit, offset: offset, order: order, filter: filter)
   end
 
-  defp do_query(where: [exp | values], for: model, index: index, limit: limit, order: order, filter: filter) do
+  defp do_query(where: [exp | values], for: model, index: index, limit: limit, offset: offset, order: order, filter: filter) do
     [exp | values]
-    |> build_query(model, index, limit, order, filter)
+    |> build_query(model, index, limit, offset, order, filter)
     |> request!(model)
   end
 
-  def build_query([exp | values], model, index \\ nil, limit \\ nil, order \\ :asec, filter \\ nil) do
+  def build_query([exp | values], model, index \\ nil, limit \\ nil, offset \\ nil, order \\ :asec, filter \\ nil) do
     table_name = model.__table_name__
 
     indexes = Enum.map(model.__local_indexes__ ++ model.__global_indexes__, &(&1.index_name))
@@ -32,7 +33,7 @@ defmodule Surge.Query do
       key_condition_expression: key_condition_expression,
       expression_attribute_values: attribute_values,
       expression_attribute_names: attribute_names
-    } |> index(index_name) |> filter(filter, model) |> limit(limit) |> order(order)
+    } |> index(index_name) |> filter(filter, model) |> limit(limit) |> offset(offset) |> order(order)
 
     ExAws.Dynamo.query(table_name, opts)
   end
@@ -86,6 +87,11 @@ defmodule Surge.Query do
   defp limit(opts, limit) when is_nil(limit), do: opts
   defp limit(opts, limit) do
     Map.merge(opts, %{limit: limit})
+  end
+
+  defp offset(opts, offset) when is_nil(offset), do: opts
+  defp offset(opts, offset) do
+    Map.merge(opts, %{exclusive_start_key: offset})
   end
 
   defp order(opts, order) when order == :asec, do: opts

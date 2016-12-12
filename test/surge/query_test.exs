@@ -54,7 +54,7 @@ defmodule Surge.QueryTest do
                "FilterExpression" => "#age >= :filter_value1",
                "TableName" => "Surge.Test.HashRangeModel"}
 
-    query_param = Surge.Query.build_query(["#id = ? and #time >= ?", 2, 100], HashRangeModel, nil, nil, :asec, ["#age >= ?", 10])
+    query_param = Surge.Query.build_query(["#id = ? and #time >= ?", 2, 100], HashRangeModel, nil, nil, nil, :asec, ["#age >= ?", 10])
 
     assert expect == query_param.data
   end
@@ -73,6 +73,10 @@ defmodule Surge.QueryTest do
 
     assert 2 == Enum.count(result)
     assert [alice, bob] == result
+
+    result = Surge.Query.query(where: ["#id = ? and #time >= ?", 2, 100], for: HashRangeModel, offset: [id: 2, time: 100])
+    assert 1 == Enum.count(result)
+    assert [bob] == result
 
     result = Surge.Query.query(where: ["#address = ?", "example.st"], for: HashRangeModel, index: :address)
     assert [alice, bob] == result
