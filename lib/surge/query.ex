@@ -129,7 +129,7 @@ defmodule Surge.Query do
 
   def expression_attribute_names(key_condition_expression, model) do
     model
-    |> names_of_keys
+    |> names_of_keys_and_attributes
     |> expression_using_keys(key_condition_expression)
     |> expression_attribute_names_format
   end
@@ -152,8 +152,8 @@ defmodule Surge.Query do
     |> Enum.reject(fn(x) -> x == nil end)
   end
 
-  defp names_of_keys(model) do
-    key_names(model.__keys__) ++ key_names(model.__secondary_keys__) ++ key_names(model.__global_keys__) |> Enum.uniq
+  defp names_of_keys_and_attributes(model) do
+    key_names(model.__keys__) ++ key_names(model.__secondary_keys__) ++ key_names(model.__global_keys__) ++ key_names(model.__attributes__) |> Enum.uniq
   end
 
   defp key_names([hash: {hname, _htype}, range: {rname, _rtype}]) do

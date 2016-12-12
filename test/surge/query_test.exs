@@ -5,7 +5,7 @@ defmodule Surge.QueryTest do
     use Surge.Model
     hash id: {:number, nil}
     range time: {:number, nil}
-    attributes name: {:string, "foo"}, age: {:number, 0}, address: {:string, "example.st"}, sex: {:string, ""}
+    attributes name: {:string, "foo"}, age: {:number, 0}, address: {:string, "example.st"}, sex: {:string, ""}, comment: {:string, ""}
     index local: :name, range: :name, projection: [:age]
     index local: :age, range: :age, projection: :keys
     index global: :address, hash: :address, projection: :all
@@ -63,10 +63,10 @@ defmodule Surge.QueryTest do
     Surge.DDL.delete_table HashRangeModel
     Surge.DDL.create_table HashRangeModel
 
-    alice = %HashRangeModel{id: 2, time: 100, name: "alice", age: 20}
+    alice = %HashRangeModel{id: 2, time: 100, name: "alice", age: 20, comment: "Good girl!!"}
     Surge.DML.put_item(alice, into: HashRangeModel)
 
-    bob = %HashRangeModel{id: 2, time: 200, name: "bob", age: 21, sex: "M"}
+    bob = %HashRangeModel{id: 2, time: 200, name: "bob", age: 21, sex: "M", comment: "Good boy!!"}
     Surge.DML.put_item(bob, into: HashRangeModel)
 
     result = Surge.Query.query(where: ["#id = ? and #time >= ?", 2, 100], for: HashRangeModel)
@@ -87,6 +87,12 @@ defmodule Surge.QueryTest do
 
     assert 2 == Enum.count(result)
     assert [alice, bob] == result
+
+    result = Surge.Query.query(where: ["#id = ? and #time >= ?", 2, 100], for: HashRangeModel, filter: ["#comment >= ?", "Good girl!!"])
+
+    assert 1 == Enum.count(result)
+    assert [alice] == result
+
 
     result = Surge.Query.query(where: ["#id = ? and #time >= ?", 2, 100], for: HashRangeModel, filter: ["#age >= ?", 10], order: :desec)
 
