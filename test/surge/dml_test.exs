@@ -22,6 +22,13 @@ defmodule Surge.DMLTest do
     assert alice == get_item(hash: 1, from: HashModel)
     assert nil == get_item(hash: 999, from: HashModel)
 
+    update_alice = %{alice | age: 99}
+    expect = {:error, {"ConditionalCheckFailedException", "The conditional request failed"}}
+    assert expect == put_item(update_alice, into: HashModel, opts: [condition_expression: "attribute_not_exists(id)"])
+
+    assert alice == get_item(hash: 1, from: HashModel)
+    assert alice.age == 20 # not updated
+
     assert_raise Surge.Exceptions.NoDefindedRangeException, fn -> get_item(hash: 999, range: 999, from: HashModel) end
 
     assert %{} == delete_item(hash: 1, from: HashModel)
