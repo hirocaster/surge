@@ -1,12 +1,35 @@
 defmodule Surge.DML do
   def put_item(value, into: model) do
-    put_item(value, into: model, opts: [])
+    put_item(value, into: model, if: nil, opts: [])
   end
-  def put_item(value, into: model, opts: opts) do
+  def put_item(value, into: model, if: if_exp) do
+    put_item(value, into: model, if: if_exp, opts: [])
+  end
+
+  # TODO: `condition_expression` と if が両方指定されているときerror
+  def put_item(value, into: model, if: if_exp, opts: opts) do
     table_name = model.__table_name__
-    with req <- ExAws.Dynamo.put_item(table_name, Map.from_struct(value), opts),
+
+    formated_opts = opts ++ condition_expression(if_exp, model)
+
+    with req <- ExAws.Dynamo.put_item(table_name, Map.from_struct(value), formated_opts),
          {:ok, _} <- ExAws.request(req),
       do: {:ok, value}
+  end
+
+  defp condition_expression(nil, _), do: []
+  defp condition_expression(exp, _) when is_binary(exp) do
+    [condition_expression: exp]
+  end
+  # TODO: Refactor, parse expression and export
+  defp condition_expression([exp | values], model) do
+    {cond_exp, attribute_values} = Surge.Query.expression_and_values(exp, values, "cond_exp_value")
+    attribute_names = Surge.Query.expression_attribute_names(exp, model)
+    [
+      condition_expression: cond_exp,
+      expression_attribute_names: attribute_names,
+      expression_attribute_values: attribute_values
+    ]
   end
 
   def put_item!(value, into: model) do
