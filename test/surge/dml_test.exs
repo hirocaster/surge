@@ -24,7 +24,6 @@ defmodule Surge.DMLTest do
 
     update_alice = %{alice | age: 99}
     expect = {:error, {"ConditionalCheckFailedException", "The conditional request failed"}}
-    # assert expect == put_item(update_alice, into: HashModel, opts: [condition_expression: "attribute_not_exists(id)"])
     assert expect == put_item(update_alice, into: HashModel, if: "attribute_not_exists(id)")
 
     assert alice == get_item(hash: 1, from: HashModel)
@@ -65,6 +64,9 @@ defmodule Surge.DMLTest do
 
     assert alice == put_item!(alice, into: HashModel)
     assert Surge.DDL.describe_table(HashModel)["ItemCount"] == 1
+
+    update_alice = %{alice | age: 99}
+    assert_raise(ExAws.Error, fn -> put_item!(update_alice, into: HashModel, if: "attribute_not_exists(id)") end)
   end
 
   defmodule HashRangeModel do
@@ -85,7 +87,7 @@ defmodule Surge.DMLTest do
 
     alice = %HashRangeModel{id: 1, time: 100, name: "alice", age: 20}
 
-    assert {:ok, alice} == put_item(alice, into: HashRangeModel, if: nil, opts: [return_values: "ALL_OLD"])
+    assert {:ok, alice} == put_item(alice, into: HashRangeModel, opts: [return_values: "ALL_OLD"])
 
     assert alice == get_item(hash: 1, range: 100, from: HashRangeModel)
     assert nil == get_item(hash: 999, range: 999, from: HashRangeModel)

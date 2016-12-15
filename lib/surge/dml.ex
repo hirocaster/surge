@@ -1,20 +1,39 @@
 defmodule Surge.DML do
-  def put_item(value, into: model) do
-    put_item(value, into: model, if: nil, opts: [])
-  end
-  def put_item(value, into: model, if: if_exp) do
-    put_item(value, into: model, if: if_exp, opts: [])
-  end
 
   # TODO: `condition_expression` と if が両方指定されているときerror
-  def put_item(value, into: model, if: if_exp, opts: opts) do
+  def put_item(item, params) do
+    model  = params[:into]
+    if_exp = params[:if] || nil
+    opts   = params[:opts] || []
+
+    do_put_item(item, into: model, if: if_exp, opts: opts)
+  end
+
+  defp do_put_item(item, into: model, if: if_exp, opts: opts) do
     table_name = model.__table_name__
 
     formated_opts = opts ++ condition_expression(if_exp, model)
 
-    with req <- ExAws.Dynamo.put_item(table_name, Map.from_struct(value), formated_opts),
+    with req <- ExAws.Dynamo.put_item(table_name, Map.from_struct(item), formated_opts),
          {:ok, _} <- ExAws.request(req),
-      do: {:ok, value}
+      do: {:ok, item}
+  end
+
+  def put_item!(item, params) when is_list(params) do
+    model  = params[:into]
+    if_exp = params[:if] || nil
+    opts   = params[:opts] || []
+
+    do_put_item!(item, into: model, if: if_exp, opts: opts)
+  end
+  def do_put_item!(item, into: model, if: if_exp, opts: opts) do
+    table_name = model.__table_name__
+
+    formated_opts = opts ++ condition_expression(if_exp, model)
+
+    with req <- ExAws.Dynamo.put_item(table_name, Map.from_struct(item), formated_opts),
+         _ <- ExAws.request!(req),
+      do: item
   end
 
   defp condition_expression(nil, _), do: []
@@ -30,16 +49,6 @@ defmodule Surge.DML do
       expression_attribute_names: attribute_names,
       expression_attribute_values: attribute_values
     ]
-  end
-
-  def put_item!(value, into: model) do
-    put_item!(value, into: model, opts: [])
-  end
-  def put_item!(value, into: model, opts: opts) do
-    table_name = model.__table_name__
-    with req <- ExAws.Dynamo.put_item(table_name, Map.from_struct(value), opts),
-         _ <- ExAws.request!(req),
-      do: value
   end
 
   def get_item(hash: hash, from: model), do: get_item(hash: hash, from: model, opts: [])
