@@ -35,7 +35,7 @@ defmodule Surge.Mixfile do
   # Type "mix help deps" for more examples and options
   defp deps do
     [
-      {:ex_aws, "~> 1.0.0-rc.4"},
+      {:ex_aws, "~> 1.0.0"},
       {:poison, "~> 2.0"},
       {:httpoison, "~> 0.9.2"},
       {:dialyxir, "~> 0.4", only: :dev},
