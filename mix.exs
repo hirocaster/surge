@@ -37,7 +37,7 @@ defmodule Surge.Mixfile do
     [
       {:ex_aws, "~> 1.0.0-rc.4"},
       {:poison, "~> 2.0"},
-      {:httpoison, "~> 0.10.0"},
+      {:httpoison, "~> 0.9.2"},
       {:dialyxir, "~> 0.4", only: :dev},
       {:ex_doc, "~> 0.14", only: :dev},
       {:credo, "~> 0.5", only: :dev},
