@@ -145,7 +145,7 @@ defmodule Surge.QueryTest do
                "FilterExpression" => "#id = :value1 and #time >= :value2",
                "TableName" => "Surge.Test.HashRangeModel"}
 
-    query_param = Surge.Query.build_scan_query(["#id = ? and #time >= ?", 2, 100], HashRangeModel)
+    query_param = Surge.Query.build_scan_query(["#id = ? and #time >= ?", 2, 100], HashRangeModel, nil)
 
     assert expect == query_param.data
   end
@@ -159,6 +159,8 @@ defmodule Surge.QueryTest do
 
     bob = %HashRangeModel{id: 2, time: 200, name: "bob", age: 20}
     Surge.DML.put_item(bob, into: HashRangeModel)
+
+    assert Surge.Query.scan(for: HashRangeModel)
 
     result = Surge.Query.scan(filter: ["#id = ? and #time >= ?", 2, 100], for: HashRangeModel)
 

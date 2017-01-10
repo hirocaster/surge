@@ -46,13 +46,19 @@ defmodule Surge.Query do
     do_scan(filter: filter, for: for, limit: limit)
   end
 
-  defp do_scan(filter: [exp | values], for: model, limit: limit) do
-    [exp | values]
+  defp do_scan(filter: filter, for: model, limit: limit) do
+    filter
     |> build_scan_query(model, limit)
     |> request!(model)
   end
 
-  def build_scan_query([exp | values], model, limit \\ nil) do
+  def build_scan_query(filter, model, limit) when is_nil(filter) do
+    table_name = model.__table_name__
+    opts = %{} |> limit(limit)
+    ExAws.Dynamo.scan(table_name, opts)
+  end
+
+  def build_scan_query([exp | values], model, limit) do
     table_name = model.__table_name__
 
     {filter_expression, attribute_values} = Surge.Query.expression_and_values(exp, values)
