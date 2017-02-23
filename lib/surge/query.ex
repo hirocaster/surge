@@ -10,17 +10,18 @@ defmodule Surge.Query do
     offset = params[:offset] || nil
     order  = params[:order]  || :asc
     filter = params[:filter] || nil
+    select = params[:select] || nil
 
-    do_query(where: where, for: for, index: index, limit: limit, offset: offset, order: order, filter: filter)
+    do_query(where: where, for: for, index: index, limit: limit, offset: offset, order: order, filter: filter, select: select)
   end
 
-  defp do_query(where: [exp | values], for: model, index: index, limit: limit, offset: offset, order: order, filter: filter) do
+  defp do_query(where: [exp | values], for: model, index: index, limit: limit, offset: offset, order: order, filter: filter, select: select) do
     [exp | values]
-    |> build_query(model, index, limit, offset, order, filter)
+    |> build_query(model, index, limit, offset, order, filter, select)
     |> request!(model)
   end
 
-  def build_query([exp | values], model, index \\ nil, limit \\ nil, offset \\ nil, order \\ :asc, filter \\ nil) do
+  def build_query([exp | values], model, index \\ nil, limit \\ nil, offset \\ nil, order \\ :asc, filter \\ nil, select \\ nil) do
     table_name = model.__table_name__
 
     indexes = Enum.map(model.__local_indexes__ ++ model.__global_indexes__, &(&1.index_name))
@@ -33,7 +34,7 @@ defmodule Surge.Query do
       key_condition_expression: key_condition_expression,
       expression_attribute_values: attribute_values,
       expression_attribute_names: attribute_names
-    } |> index(index_name) |> filter(filter, model) |> limit(limit) |> offset(offset) |> order(order)
+    } |> index(index_name) |> filter(filter, model) |> limit(limit) |> offset(offset) |> order(order) |> select(select)
 
     ExAws.Dynamo.query(table_name, opts)
   end
@@ -107,8 +108,22 @@ defmodule Surge.Query do
       Map.merge(opts, %{scan_index_forward: false})
   end
 
+  defp select(opts, select) when is_nil(select), do: opts
+  defp select(opts, select) when select == :count do
+    Map.merge(opts, %{select: "COUNT"})
+  end
+
   defp decode(values, model) when is_map(values) do
     ExAws.Dynamo.decode_item(values, as: model)
+  end
+
+  defp request!(%{data: %{"Select"=>"COUNT"}} = query_param, _model) do
+    case request(query_param) do
+      {:ok, result} ->
+        result["Count"]
+      {:error, msg} ->
+        Surge.Exceptions.dynamic_raise msg
+    end
   end
 
   defp request!(query_param, model) do

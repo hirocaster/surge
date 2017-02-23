@@ -33,20 +33,21 @@ defmodule Surge.QueryTest do
     assert [value1: 1, value2: 100] == values_map
   end
 
-  test "build_query" do
+  test "build_query, select type count" do
     expect = %{"ExpressionAttributeNames" => %{"#id": "id", "#time": "time"},
                "ExpressionAttributeValues" => %{":value1" => %{"N" => "2"},
                                                 ":value2" => %{"N" => "100"}},
                "KeyConditionExpression" => "#id = :value1 and #time >= :value2",
                "TableName" => "Surge.Test.HashRangeModel",
-               "ScanIndexForward" => true }
+               "ScanIndexForward" => true,
+               "Select" => "COUNT"}
 
-    query_param = Surge.Query.build_query(["#id = ? and #time >= ?", 2, 100], HashRangeModel)
+    query_param = Surge.Query.build_query(["#id = ? and #time >= ?", 2, 100], HashRangeModel, nil, nil, nil, :asc, nil, :count)
 
     assert expect == query_param.data
   end
 
-  test "build_query + filter" do
+  test "build_query + filter, select type count" do
     expect = %{"ExpressionAttributeNames" => %{"#id": "id", "#time": "time", "#age": "age"},
                "ExpressionAttributeValues" => %{":value1" => %{"N" => "2"},
                                                 ":value2" => %{"N" => "100"},
@@ -54,9 +55,10 @@ defmodule Surge.QueryTest do
                "KeyConditionExpression" => "#id = :value1 and #time >= :value2",
                "FilterExpression" => "#age >= :filter_value1",
                "TableName" => "Surge.Test.HashRangeModel",
-               "ScanIndexForward" => true }
+               "ScanIndexForward" => true,
+               "Select" => "COUNT"}
 
-    query_param = Surge.Query.build_query(["#id = ? and #time >= ?", 2, 100], HashRangeModel, nil, nil, nil, :asc, ["#age >= ?", 10])
+    query_param = Surge.Query.build_query(["#id = ? and #time >= ?", 2, 100], HashRangeModel, nil, nil, nil, :asc, ["#age >= ?", 10], :count)
 
     assert expect == query_param.data
   end
@@ -99,6 +101,8 @@ defmodule Surge.QueryTest do
     assert 1 == Enum.count(result)
     assert [alice] == result
 
+    count_result = Surge.Query.query(where: ["#id = ? and #time >= ?", 2, 100], for: HashRangeModel, filter: ["#age >= ?", 10], select: :count)
+    assert 2 == count_result
 
     asc_result = Surge.Query.query(where: ["#id = ? and #time >= ?", 2, 100], for: HashRangeModel, filter: ["#age >= ?", 10], order: :asc)
     desec_result = Surge.Query.query(where: ["#id = ? and #time >= ?", 2, 100], for: HashRangeModel, filter: ["#age >= ?", 10], order: :desec)
