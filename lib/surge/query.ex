@@ -8,7 +8,7 @@ defmodule Surge.Query do
     index  = params[:index]  || nil
     limit  = params[:limit]  || nil
     offset = params[:offset] || nil
-    order  = params[:order]  || :asec
+    order  = params[:order]  || :asc
     filter = params[:filter] || nil
 
     do_query(where: where, for: for, index: index, limit: limit, offset: offset, order: order, filter: filter)
@@ -20,7 +20,7 @@ defmodule Surge.Query do
     |> request!(model)
   end
 
-  def build_query([exp | values], model, index \\ nil, limit \\ nil, offset \\ nil, order \\ :asec, filter \\ nil) do
+  def build_query([exp | values], model, index \\ nil, limit \\ nil, offset \\ nil, order \\ :asc, filter \\ nil) do
     table_name = model.__table_name__
 
     indexes = Enum.map(model.__local_indexes__ ++ model.__global_indexes__, &(&1.index_name))
@@ -100,7 +100,9 @@ defmodule Surge.Query do
     Map.merge(opts, %{exclusive_start_key: offset})
   end
 
-  defp order(opts, order) when order == :asec, do: opts
+  defp order(opts, order) when order == :asc do
+    Map.merge(opts, %{scan_index_forward: true})
+  end
   defp order(opts, order) when order == :desec do
       Map.merge(opts, %{scan_index_forward: false})
   end

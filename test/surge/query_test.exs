@@ -38,7 +38,8 @@ defmodule Surge.QueryTest do
                "ExpressionAttributeValues" => %{":value1" => %{"N" => "2"},
                                                 ":value2" => %{"N" => "100"}},
                "KeyConditionExpression" => "#id = :value1 and #time >= :value2",
-               "TableName" => "Surge.Test.HashRangeModel"}
+               "TableName" => "Surge.Test.HashRangeModel",
+               "ScanIndexForward" => true }
 
     query_param = Surge.Query.build_query(["#id = ? and #time >= ?", 2, 100], HashRangeModel)
 
@@ -52,9 +53,10 @@ defmodule Surge.QueryTest do
                                                 ":filter_value1" => %{"N" => "10"}},
                "KeyConditionExpression" => "#id = :value1 and #time >= :value2",
                "FilterExpression" => "#age >= :filter_value1",
-               "TableName" => "Surge.Test.HashRangeModel"}
+               "TableName" => "Surge.Test.HashRangeModel",
+               "ScanIndexForward" => true }
 
-    query_param = Surge.Query.build_query(["#id = ? and #time >= ?", 2, 100], HashRangeModel, nil, nil, nil, :asec, ["#age >= ?", 10])
+    query_param = Surge.Query.build_query(["#id = ? and #time >= ?", 2, 100], HashRangeModel, nil, nil, nil, :asc, ["#age >= ?", 10])
 
     assert expect == query_param.data
   end
@@ -98,10 +100,11 @@ defmodule Surge.QueryTest do
     assert [alice] == result
 
 
-    result = Surge.Query.query(where: ["#id = ? and #time >= ?", 2, 100], for: HashRangeModel, filter: ["#age >= ?", 10], order: :desec)
+    asc_result = Surge.Query.query(where: ["#id = ? and #time >= ?", 2, 100], for: HashRangeModel, filter: ["#age >= ?", 10], order: :asc)
+    desec_result = Surge.Query.query(where: ["#id = ? and #time >= ?", 2, 100], for: HashRangeModel, filter: ["#age >= ?", 10], order: :desec)
 
-    assert 2 == Enum.count(result)
-    assert [bob, alice] == result
+    assert [alice, bob] == asc_result
+    assert Enum.reverse([alice, bob]) == desec_result
 
     result = Surge.Query.query(where: ["#id = ? and #time >= ?", 2, 100], for: HashRangeModel, filter: ["#age >= ?", 10], limit: 1)
 
