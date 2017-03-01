@@ -105,10 +105,10 @@ defmodule Surge.QueryTest do
     assert 2 == count_result
 
     asc_result = Surge.Query.query(where: ["#id = ? and #time >= ?", 2, 100], for: HashRangeModel, filter: ["#age >= ?", 10], order: :asc)
-    desec_result = Surge.Query.query(where: ["#id = ? and #time >= ?", 2, 100], for: HashRangeModel, filter: ["#age >= ?", 10], order: :desec)
+    desc_result = Surge.Query.query(where: ["#id = ? and #time >= ?", 2, 100], for: HashRangeModel, filter: ["#age >= ?", 10], order: :desc)
 
     assert [alice, bob] == asc_result
-    assert Enum.reverse([alice, bob]) == desec_result
+    assert Enum.reverse([alice, bob]) == desc_result
 
     result = Surge.Query.query(where: ["#id = ? and #time >= ?", 2, 100], for: HashRangeModel, filter: ["#age >= ?", 10], limit: 1)
 
@@ -125,12 +125,12 @@ defmodule Surge.QueryTest do
     assert 1 == Enum.count(result)
     assert alice == List.first(result)
 
-    result = Surge.Query.query(where: ["#id = ? and #time >= ?", 2, 100], for: HashRangeModel, limit: 1, order: :desec)
+    result = Surge.Query.query(where: ["#id = ? and #time >= ?", 2, 100], for: HashRangeModel, limit: 1, order: :desc)
 
     assert 1 == Enum.count(result)
     assert bob == List.first(result)
 
-    result = Surge.Query.query(where: ["#id = ? and #time >= ?", 2, 100], for: HashRangeModel, order: :desec)
+    result = Surge.Query.query(where: ["#id = ? and #time >= ?", 2, 100], for: HashRangeModel, order: :desc)
 
     assert 2 == Enum.count(result)
     assert [bob, alice] == result
