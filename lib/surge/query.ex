@@ -104,7 +104,7 @@ defmodule Surge.Query do
   defp order(opts, order) when order == :asc do
     Map.merge(opts, %{scan_index_forward: true})
   end
-  defp order(opts, order) when order == :desec do
+  defp order(opts, order) when order == :desc do
       Map.merge(opts, %{scan_index_forward: false})
   end
 
