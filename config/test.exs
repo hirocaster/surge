@@ -4,7 +4,7 @@ config :logger, level: :warn
 
 config :ex_aws, :dynamodb,
   scheme: "http://",
-  host: "localhost",
+  host: System.get_env("DYNAMODB_HOST") || "localhost",
   port: 8000,
   region: "us-east-1",
   http_client: ExAws.Request.HTTPoison,

@@ -1,0 +1,23 @@
+version: 2
+jobs:
+  build:
+    working_directory: /root/workspace
+    docker:
+      - image: hirocaster/surge:test
+    steps:
+      - checkout
+      - run:
+          name: Install Docker Compose
+          command: |
+            set -x
+            apk add python python-dev py-pip build-base
+            pip install docker-compose
+      - setup_remote_docker
+      - run:
+          name: Start build docker-compose
+          command: docker-compose build
+      - run:
+          name: Start test
+          command: |
+            set -x
+            docker-compose run app
