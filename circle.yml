@@ -17,9 +17,9 @@ jobs:
       - setup_remote_docker
       - run:
           name: Start build docker-compose
-          command: docker-compose build
+          command: docker-compose -f docker-compose.yml.ci build
       - run:
           name: Start test
           command: |
             set -x
-            docker-compose run app
+            docker-compose -f docker-compose.yml.ci run test
