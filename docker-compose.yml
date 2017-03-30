@@ -1,0 +1,10 @@
+app:
+  build: .
+  environment:
+    - AWS_ACCESS_KEY_ID=dummy
+    - AWS_SECRET_ACCESS_KEY=dummy
+    - DYNAMODB_HOST=dynamodb
+  links:
+   - dynamodb
+dynamodb:
+  image: deangiberson/aws-dynamodb-local
