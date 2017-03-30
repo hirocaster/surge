@@ -21,3 +21,9 @@ The library is still very much a work in progress.
       [applications: [:surge]]
     end
     ```
+
+## Test
+
+``` shell
+$ docker-compose run test
+```
