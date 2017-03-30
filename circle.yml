@@ -3,15 +3,17 @@ jobs:
   build:
     working_directory: /root/workspace
     docker:
-      - image: hirocaster/surge:test
+      - image: golang:latest
+        environment:
+          GO15VENDOREXPERIMENT: 1
     steps:
       - checkout
       - run:
           name: Install Docker Compose
           command: |
             set -x
-            apk add python python-dev py-pip build-base
-            pip install docker-compose
+            curl -L https://github.com/docker/compose/releases/download/1.11.2/docker-compose-`uname -s`-`uname -m` > /usr/local/bin/docker-compose
+            chmod +x /usr/local/bin/docker-compose
       - setup_remote_docker
       - run:
           name: Start build docker-compose
