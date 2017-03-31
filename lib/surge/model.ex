@@ -52,6 +52,7 @@ defmodule Surge.Model do
   def __def_struct__(mod) do
     # keys                 = Module.get_attribute(mod, :keys)
     attribs              = Module.get_attribute(mod, :attributes)
+    attributes_type_validation(attribs)
     fields               = attribs |> Enum.map(fn {name, {_type, default}} -> {name, default} end)
 
     # meta = %{table: canonical_table_name,
@@ -66,6 +67,13 @@ defmodule Surge.Model do
         defstruct unquote(fields)
       end
     end
+  end
+
+  defp attributes_type_validation(attributes) do
+    attributes |> Enum.map(fn {_name, {type, _default}} -> dynamo_type_validation(type) end)
+  end
+  defp dynamo_type_validation(type) do
+    ExAws.Dynamo.Encoder.atom_to_dynamo_type(type)
   end
 
   def __def_indexes__(mod) do

@@ -42,4 +42,14 @@ defmodule Surge.ModelTest do
     assert hash_range_model.name == "foo"
     assert hash_range_model.age == 0
   end
+
+  test "Define unknown type attribute" do
+    assert_raise ArgumentError, "Unknown dynamo type for value: :unknown_type", fn ->
+      defmodule UnknownTypeModel do
+        use Surge.Model
+        hash id: {:number, nil}
+        attributes name: {:unknown_type, nil}
+      end
+    end
+  end
 end
