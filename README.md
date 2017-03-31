@@ -27,3 +27,18 @@ The library is still very much a work in progress.
 ``` shell
 $ docker-compose run test
 ```
+
+## Reference
+
+### Support Type
+
+ - blob
+ - boolean
+ - blob_set
+ - list
+ - map
+ - number_set
+ - null
+ - number
+ - string
+ - string_set

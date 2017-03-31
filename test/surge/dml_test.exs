@@ -6,7 +6,7 @@ defmodule Surge.DMLTest do
   defmodule HashModel do
     use Surge.Model
     hash id: {:number, nil}
-    attributes name: {:string, "foo"}, age: {:number, 0}, lock_version: {:number, 0}
+    attributes name: {:string, "foo"}, age: {:number, 0}, lock_version: {:number, 0}, admin: {:boolean, false}
     index global: :age, hash: :age, projection: :keys
   end
 
@@ -20,6 +20,7 @@ defmodule Surge.DMLTest do
     assert Surge.DDL.describe_table(HashModel)["ItemCount"] == 1
 
     assert alice == get_item(hash: 1, from: HashModel)
+    assert alice.admin == false
     assert nil == get_item(hash: 999, from: HashModel)
 
     update_alice = %{alice | age: 99}
@@ -31,12 +32,13 @@ defmodule Surge.DMLTest do
 
     # lock_version
     if_exp = ["attribute_not_exists(lock_version) OR #lock_version = ?", alice.lock_version]
-    update_alice = %{alice | age: 21, lock_version: alice.lock_version + 1}
+    update_alice = %{alice | age: 21, lock_version: alice.lock_version + 1, admin: true}
     {:ok, _} = put_item(update_alice, into: HashModel, if: if_exp)
 
     alice = get_item(hash: 1, from: HashModel)
     assert alice.age == 21
     assert alice.lock_version == 1
+    assert alice.admin == true
 
     faild_update_alice = %{alice | age: 21, lock_version: alice.lock_version}
     expect = {:error, {"ConditionalCheckFailedException", "The conditional request failed"}}
