@@ -6,7 +6,9 @@ defmodule Surge.DDLTest do
   test "HashModel" do
     defmodule HashModel do
       use Surge.Model
-      hash id: {:string, ""}
+      schema do
+        hash id: {:string, ""}
+      end
     end
 
     delete_table HashModel
@@ -22,9 +24,11 @@ defmodule Surge.DDLTest do
 
     defmodule UpdateHashModel do
       use Surge.Model
-      table_name "Surge.Test.HashModel"
-      hash id: {:string, ""}
-      throughput read: 10, write: 3
+      schema do
+        table_name "Surge.Test.HashModel"
+        hash id: {:string, ""}
+        throughput read: 10, write: 3
+      end
     end
 
     assert UpdateHashModel.__throughput__ == [10, 3]
@@ -42,14 +46,16 @@ defmodule Surge.DDLTest do
   test "HashRangeModel" do
     defmodule HashRangeModel do
       use Surge.Model
-      hash id: {:string, ""}
-      range time: {:number, nil}
-      attributes name: {:string, "foo"}, age: {:number, 0}, address: {:string, "example.st"}, sex: {:string, ""}
-      throughput read: 10, write: 3
-      index local: :name, range: :name, projection: :keys
-      index local: :age, range: :age, projection: [:age]
-      index local: :address, range: :address, projection: :all
-      index global: :age_sex, hash: :age, range: :sex, projection: :keys, throughput: [read: 5, write: 2]
+      schema do
+        hash id: {:string, ""}
+        range time: {:number, nil}
+        attributes name: {:string, "foo"}, age: {:number, 0}, address: {:string, "example.st"}, sex: {:string, ""}
+        throughput read: 10, write: 3
+        index local: :name, range: :name, projection: :keys
+        index local: :age, range: :age, projection: [:age]
+        index local: :address, range: :address, projection: :all
+        index global: :age_sex, hash: :age, range: :sex, projection: :keys, throughput: [read: 5, write: 2]
+      end
     end
 
     delete_table HashRangeModel
@@ -86,9 +92,11 @@ defmodule Surge.DDLTest do
   test "GlobalSecondaryIndex hash only" do
     defmodule StaffTestModel do
       use Surge.Model
-      hash id: {:number, nil}
-      attributes staff_id: {:number, nil}
-      index global: :staff_id, hash: :staff_id, projection: :keys
+      schema do
+        hash id: {:number, nil}
+        attributes staff_id: {:number, nil}
+        index global: :staff_id, hash: :staff_id, projection: :keys
+      end
     end
 
     delete_table StaffTestModel
@@ -102,9 +110,11 @@ defmodule Surge.DDLTest do
   test "GlobalIndexModel" do
     defmodule GlobalIndexModel do
       use Surge.Model
-      hash id: {:string, ""}
-      range time: {:number, nil}
-      attributes name: {:string, "foo"}, age: {:number, 0}, address: {:string, "example.st"}, sex: {:string, ""}
+      schema do
+        hash id: {:string, ""}
+        range time: {:number, nil}
+        attributes name: {:string, "foo"}, age: {:number, 0}, address: {:string, "example.st"}, sex: {:string, ""}
+      end
     end
 
     delete_table GlobalIndexModel
@@ -112,11 +122,13 @@ defmodule Surge.DDLTest do
 
     defmodule AddGlobalIndexModel do
       use Surge.Model
-      table_name "Surge.Test.GlobalIndexModel"
-      hash id: {:string, ""}
-      range time: {:number, nil}
-      attributes name: {:string, "foo"}, age: {:number, 0}, address: {:string, "example.st"}, sex: {:string, ""}
-      index global: :age_sex, hash: :age, projection: :keys, throughput: [read: 5, write: 2]
+      schema do
+        table_name "Surge.Test.GlobalIndexModel"
+        hash id: {:string, ""}
+        range time: {:number, nil}
+        attributes name: {:string, "foo"}, age: {:number, 0}, address: {:string, "example.st"}, sex: {:string, ""}
+        index global: :age_sex, hash: :age, projection: :keys, throughput: [read: 5, write: 2]
+      end
     end
 
     {:ok, _} = update_table AddGlobalIndexModel
@@ -130,12 +142,14 @@ defmodule Surge.DDLTest do
 
     defmodule AddAddGlobalIndexModel do
       use Surge.Model
-      table_name "Surge.Test.GlobalIndexModel"
-      hash id: {:string, ""}
-      range time: {:number, nil}
-      attributes name: {:string, "foo"}, age: {:number, 0}, address: {:string, "example.st"}, sex: {:string, ""}
-      index global: :age_sex, hash: :age, projection: :keys, throughput: [read: 5, write: 2]
-      index global: :address_age, hash: :address, range: :age, projection: :keys, throughput: [read: 10, write: 4]
+      schema do
+        table_name "Surge.Test.GlobalIndexModel"
+        hash id: {:string, ""}
+        range time: {:number, nil}
+        attributes name: {:string, "foo"}, age: {:number, 0}, address: {:string, "example.st"}, sex: {:string, ""}
+        index global: :age_sex, hash: :age, projection: :keys, throughput: [read: 5, write: 2]
+        index global: :address_age, hash: :address, range: :age, projection: :keys, throughput: [read: 10, write: 4]
+      end
     end
 
     :timer.sleep(1000);
@@ -146,11 +160,13 @@ defmodule Surge.DDLTest do
 
     defmodule DeleteGlobalIndexModel do
       use Surge.Model
-      table_name "Surge.Test.GlobalIndexModel"
-      hash id: {:string, ""}
-      range time: {:number, nil}
-      attributes name: {:string, "foo"}, age: {:number, 0}, address: {:string, "example.st"}, sex: {:string, ""}
-      index global: :address_age, hash: :address, range: :age, projection: :keys, throughput: [read: 10, write: 4]
+      schema do
+        table_name "Surge.Test.GlobalIndexModel"
+        hash id: {:string, ""}
+        range time: {:number, nil}
+        attributes name: {:string, "foo"}, age: {:number, 0}, address: {:string, "example.st"}, sex: {:string, ""}
+        index global: :address_age, hash: :address, range: :age, projection: :keys, throughput: [read: 10, write: 4]
+      end
     end
 
     {:ok, _} = update_table DeleteGlobalIndexModel
@@ -167,7 +183,9 @@ defmodule Surge.DDLTest do
   test "No Table" do
     defmodule NoTableModel do
       use Surge.Model
-      hash id: {:string, ""}
+      schema do
+        hash id: {:string, ""}
+      end
     end
 
     assert_raise Surge.Exceptions.ResourceNotFoundException, "Cannot do operations on a non-existent table", fn -> describe_table NoTableModel end
