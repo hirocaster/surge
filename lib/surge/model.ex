@@ -32,44 +32,38 @@ defmodule Surge.Model do
       Module.register_attribute(__MODULE__, :all_indexes_def, accumulate: true)
 
       import Surge.Model
-      @before_compile unquote(__MODULE__)
     end
   end
 
-  defmacro __before_compile__(env) do
-    target = env.module
-
-    table_name = Module.get_attribute(target, :table_name)
-    Module.put_attribute(target, :table_name, table_name)
-
-    Module.eval_quoted __CALLER__, [
-      Surge.Model.__def_struct__(target),
-      Surge.Model.__def_indexes__(target),
-      Surge.Model.__def_helper_funcs__(target)
-    ]
+  defmacro schema([do: block]) do
+    do_schema(block)
   end
 
-  def __def_struct__(mod) do
-    # keys                 = Module.get_attribute(mod, :keys)
-    attribs              = Module.get_attribute(mod, :attributes)
-    attributes_type_validation(attribs)
-    fields               = attribs |> Enum.map(fn {name, {_type, default}} -> {name, default} end)
+  defp do_schema(block) do
+    quote do
+      unquote(block)
 
-    # meta = %{table: canonical_table_name,
-    #          keys: keys,
-    #          attributes: attribs}
+      table_name = Module.get_attribute(__ENV__.module, :table_name)
+      Module.put_attribute(__ENV__.module, :table_name, table_name)
 
-    # fields = [__meta__: Macro.escape(Macro.escape(meta))] ++ fields # double-escape for the doubly-quoted
-
-    # quote in quote because we eval_quoted the result of the function
-    quote bind_quoted: [fields: fields] do
-      quote do
-        defstruct unquote(fields)
-      end
+      Module.eval_quoted __ENV__, [
+        Surge.Model.__defstruct__(__ENV__.module),
+        Surge.Model.__def_indexes__(__ENV__.module),
+        Surge.Model.__def_helper_funcs__(__ENV__.module)
+      ]
     end
   end
 
-  defp attributes_type_validation(attributes) do
+  def __defstruct__(target) do
+    quote bind_quoted: [target: target] do
+      attribs = Module.get_attribute(target, :attributes)
+      Surge.Model.attributes_type_validation(attribs)
+      fields = attribs |> Enum.map(fn {name, {_type, default}} -> {name, default} end)
+      defstruct fields
+    end
+  end
+
+  def attributes_type_validation(attributes) do
     attributes |> Enum.map(fn {_name, {type, _default}} -> dynamo_type_validation(type) end)
   end
   defp dynamo_type_validation(type) do

@@ -3,13 +3,15 @@ defmodule Surge.QueryTest do
 
   defmodule HashRangeModel do
     use Surge.Model
-    hash id: {:number, nil}
-    range time: {:number, nil}
-    attributes name: {:string, "foo"}, age: {:number, 0}, address: {:string, "example.st"}, sex: {:string, ""}, comment: {:string, ""}
-    index local: :name, range: :name, projection: [:age]
-    index local: :age, range: :age, projection: :keys
-    index global: :address, hash: :address, projection: :all
-    index global: :age_sex, hash: :age, range: :sex, projection: :keys, throughput: [read: 5, write: 2]
+    schema do
+      hash id: {:number, nil}
+      range time: {:number, nil}
+      attributes name: {:string, "foo"}, age: {:number, 0}, address: {:string, "example.st"}, sex: {:string, ""}, comment: {:string, ""}
+      index local: :name, range: :name, projection: [:age]
+      index local: :age, range: :age, projection: :keys
+      index global: :address, hash: :address, projection: :all
+      index global: :age_sex, hash: :age, range: :sex, projection: :keys, throughput: [read: 5, write: 2]
+    end
   end
 
   test "expression_attribute_names" do

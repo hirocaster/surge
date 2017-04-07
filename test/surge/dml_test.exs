@@ -5,9 +5,11 @@ defmodule Surge.DMLTest do
 
   defmodule HashModel do
     use Surge.Model
-    hash id: {:number, nil}
-    attributes name: {:string, "foo"}, age: {:number, 0}, lock_version: {:number, 0}, admin: {:boolean, false}
-    index global: :age, hash: :age, projection: :keys
+    schema do
+      hash id: {:number, nil}
+      attributes name: {:string, "foo"}, age: {:number, 0}, lock_version: {:number, 0}, admin: {:boolean, false}
+      index global: :age, hash: :age, projection: :keys
+    end
   end
 
   test "PutItem/GetItem" do
@@ -73,9 +75,11 @@ defmodule Surge.DMLTest do
 
   defmodule HashRangeModel do
     use Surge.Model
-    hash id: {:number, nil}
-    range time: {:number, nil}
-    attributes name: {:string, "foo"}, age: {:number, 0}
+    schema do
+      hash id: {:number, nil}
+      range time: {:number, nil}
+      attributes name: {:string, "foo"}, age: {:number, 0}
+    end
   end
 
   test "PutItem/GetItem HashRange" do
