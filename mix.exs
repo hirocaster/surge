@@ -19,6 +19,7 @@ defmodule Surge.Mixfile do
     [applications: [
         :logger,
         :ex_aws,
+        :ex_aws_dynamo,
         :poison,
         :httpoison
       ]]
@@ -35,8 +36,9 @@ defmodule Surge.Mixfile do
   # Type "mix help deps" for more examples and options
   defp deps do
     [
-      {:ex_aws, "~> 1.0.0"},
-      {:poison, "~> 2.0"},
+      {:ex_aws, "~> 2.0"},
+      {:ex_aws_dynamo, "~> 2.0"},
+      {:poison, "~> 3.0"},
       {:httpoison, "~> 0.9.2"},
       {:dialyxir, "~> 0.4", only: :dev},
       {:ex_doc, "~> 0.14", only: :dev},
