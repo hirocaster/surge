@@ -4,7 +4,7 @@ defmodule Surge.Mixfile do
   def project do
     [app: :surge,
      version: "0.0.1",
-     elixir: "~> 1.3",
+     elixir: "~> 1.5",
      description: "Amazon DynamoDB for Elixir",
      package: package(),
      build_embedded: Mix.env == :prod,
